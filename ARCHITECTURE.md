@@ -97,12 +97,7 @@ app; they can ship and version their own package independently.
 ## What this repo deliberately does not do
 
 - No deployment, no Dockerfile, no running service — this package is pure Python, installed
-  in-process into the main app's container. Concretely: `aurora_rs485.py` talks to a physical
-  USB-to-RS485 adapter at a fixed path (`/dev/ttyUSB1`), but making that device node exist and be
-  readable inside the container — Docker device passthrough (`/dev/ttyUSB0` → `/dev/ttyUSB1`) and
-  `dialout` group membership — is entirely the main app's `Dockerfile`/`docker-compose.override.yml`
-  concern. The driver just assumes the device node is already there by the time it runs; it has no
-  hardware-passthrough concern of its own, the same way it has no deployment concern of its own.
+  in-process into the main app's container.
 - No knowledge of how device config is stored or encrypted at rest (that's entirely the main app's
   concern — `src/devices/__init__.py`'s Fernet encryption, PBKDF2 key derivation, etc.).
 - No knowledge of scheduling/polling cadence — the main app's scheduler decides how often
