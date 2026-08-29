@@ -343,9 +343,21 @@ def test_get_data_failure():
    what its automated enforcement does and doesn't cover). Expect comments directly on the PR.
 4. **A maintainer does the final review** — CI passing and the automated agent review are necessary,
    not sufficient; a human still confirms the driver is safe and correct before merging, especially
-   for anything the static checks structurally can't verify (e.g. whether the device's actual
-   protocol was implemented correctly, which requires either real hardware or a careful read of the
-   vendor's API docs).
+   for anything the static checks structurally can't verify. This repo's own tests mock all
+   network/serial I/O by design (see "Testing" above), so nothing here ever runs a driver against a
+   real device — that only happens if the maintainer owns matching hardware, by temporarily pointing
+   the main app's **ACC** deployment (never production) at the PR's branch or commit:
+   ```
+   git+https://github.com/H20one/energy-optimizer-device-drivers.git@<branch-or-commit-sha>#egg=energy-optimizer-device-drivers
+   ```
+   in `requirements.txt` on `energy-optimizer`'s `acceptance` branch, redeploying, and confirming
+   discover()/get_data()/the setters behave correctly against the live device. That pin gets
+   reverted to a released tag immediately after — it's a one-off validation step that stays on
+   `acceptance`, never something that reaches `energy-optimizer`'s `main` branch; see that repo's own
+   `requirements.txt` rule ("never an unpinned branch, for reproducible builds") for why this is a
+   temporary exception, not a contradiction of it. For a driver whose hardware the maintainer doesn't
+   have, this step isn't possible; review then relies more on a careful read of the vendor's
+   protocol docs and the contributor's own testing.
 5. Once merged, a builtin-style driver ships in the next tagged release of this package (see
    [CHANGELOG.md](CHANGELOG.md)) — `energy-optimizer` picks it up when it bumps its pinned dependency
    version. An external (pip-installed, entry-point-based) driver is independent of this repo's
