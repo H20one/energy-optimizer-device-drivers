@@ -2,6 +2,19 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.8 — 2026-08-29
+
+### Added
+- `tests/test_homewizard_p1.py` — the last builtin driver without its own behavior test file
+  (flagged as a known gap in 0.1.7). Covers `HomewizardP1Driver.get_data()`/`get_status()` (including
+  single-phase/no-gas responses where optional fields are legitimately absent) and `discover()`'s
+  network-scan orchestration (device found, none found, local-IP lookup failure). All response
+  bodies are fabricated, matching the format used throughout this repo's other driver tests.
+  `_probe_homewizard`'s own identity-extraction logic was already covered separately in
+  `test_driver_discover_identity.py` and isn't duplicated here. Every `get_data()` success-path test
+  also asserts `validate_contract_data(DeviceType.GRID_METER, data) == []`, so all four builtin
+  drivers are now exercised against the runtime contract check added in 0.1.7.
+
 ## 0.1.7 — 2026-08-29
 
 ### Added

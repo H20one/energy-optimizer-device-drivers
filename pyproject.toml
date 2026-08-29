@@ -1,6 +1,6 @@
 [project]
 name = "energy-optimizer-device-drivers"
-version = "0.1.7"
+version = "0.1.8"
 description = "Device driver plugins for the Energy Optimizer home-energy dashboard"
 readme = "README.md"
 license = { file = "LICENSE" }
