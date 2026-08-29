@@ -91,6 +91,7 @@ def resolve_verify(
     explicit_cert: str,
     store_dir: Path,
     timeout: int,
+    prefix: str = "device",
 ) -> str | bool:
     """Return a cert path (or ``False``) to use as the TLS verification source.
 
@@ -100,6 +101,13 @@ def resolve_verify(
     3. Fetch and pin the cert now (TOFU), returning the new path.
        Returns ``False`` if pinning fails (network unreachable).
 
+    ``prefix`` should be the calling driver's ``driver_id`` (e.g. ``"alfen_eve"``) —
+    this module is shared infrastructure for any HTTPS driver, and the pinned
+    filename should say which driver/device family a cert belongs to rather than
+    assuming it's always the first driver that used TOFU pinning here. The IP
+    alone already makes the filename unique; the prefix is for a human reading
+    ``store_dir``'s contents, not a collision guard.
+
     The returned value should be passed to ``configure_session_tls()`` rather
     than used directly as ``verify=`` in ``requests`` calls — the latter
     triggers hostname checking which fails for IP-addressed self-signed certs.
@@ -107,7 +115,7 @@ def resolve_verify(
     if explicit_cert:
         return explicit_cert
 
-    pinned_path = _pinned_path(ip, store_dir)
+    pinned_path = _pinned_path(ip, store_dir, prefix)
     if pinned_path.exists():
         # DEBUG, not INFO: pinned_path's filename embeds the IP (see
         # _pinned_path below), so logging the path is an indirect IP
@@ -119,9 +127,10 @@ def resolve_verify(
     return _pin_cert(ip, pinned_path, timeout)
 
 
-def _pinned_path(ip: str, store_dir: Path) -> Path:
+def _pinned_path(ip: str, store_dir: Path, prefix: str = "device") -> Path:
     safe_ip = re.sub(r"[^a-zA-Z0-9]", "_", ip)
-    return store_dir / f"alfen_{safe_ip}.pem"
+    safe_prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
+    return store_dir / f"{safe_prefix}_{safe_ip}.pem"
 
 
 def _pin_cert(ip: str, dest: Path, timeout: int) -> str | bool:

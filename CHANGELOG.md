@@ -2,6 +2,22 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.11 — 2026-08-29
+
+### Changed
+- `cert_store.resolve_verify()`/`_pinned_path()` take a new `prefix` parameter (defaulting to
+  `"device"`) instead of hardcoding `"alfen_"` — this module is shared TOFU-pinning infrastructure
+  for any HTTPS driver, not Alfen-specific, and the pinned filename should say which driver a cert
+  belongs to. `alfen_eve.py` now passes its own `driver_id`. Not a collision fix (the IP already
+  makes filenames unique) — a clarity fix, since a future second HTTPS driver's pinned certs would
+  otherwise be filed under a misleading `alfen_*` name.
+- Added `tests/test_cert_store.py` — this module had no dedicated tests at all before now.
+
+**Operational note**: any already-deployed Alfen charger's pinned cert (`data/certs/alfen_<ip>.pem`)
+won't match the new expected filename (`alfen_eve_<ip>.pem`) and will be silently re-pinned via TOFU
+on the next connection — automatic, harmless, but a real filesystem change worth knowing about
+before this version reaches a live install.
+
 ## 0.1.10 — 2026-08-29
 
 ### Fixed

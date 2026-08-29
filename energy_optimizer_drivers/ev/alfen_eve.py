@@ -69,7 +69,7 @@ class AlfenEveDriver(EVChargerDriver):
         explicit_cert = config.get("ca_cert_path", "")
         self._cert_store_dir: Path = Path(config.get("cert_store_dir", "data/certs"))
         self._verify: str | bool = resolve_verify(
-            self._ip, explicit_cert, self._cert_store_dir, self._timeout
+            self._ip, explicit_cert, self._cert_store_dir, self._timeout, prefix=self.driver_id
         )
 
         # Persistent session — authenticated once and reused across polls.
@@ -274,7 +274,7 @@ class AlfenEveDriver(EVChargerDriver):
         """
         if not self._verify:
             self._verify = resolve_verify(
-                self._ip, "", self._cert_store_dir, self._timeout
+                self._ip, "", self._cert_store_dir, self._timeout, prefix=self.driver_id
             )
         if not self._verify:
             self._last_error = (
