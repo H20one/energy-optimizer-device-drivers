@@ -1,13 +1,13 @@
-"""Regression tests for the Alfen EVE driver bug fixes.
+"""Regression tests for the Alfen EVE driver, guarding against four specific mistakes
+that are easy to reintroduce given how the device's API actually behaves:
 
-Covers four bugs introduced when alfen_reader.py was ported into the driver system:
-
-  Bug A — Wrong API endpoint: was /api/categories/meter1,
-           must be GET /api/prop with params={"cat": "meter1"}
-  Bug B — Wrong response parsing: was flat dict lookup,
-           must parse {"properties": [{id, value}, ...]} list
-  Bug C — OCPP state type: was string.lower(), API returns integer
-  Bug D — Missing power calculation: power_w = sum(Vn * In) * PF
+  Bug A — Wrong API endpoint: the correct call is GET /api/prop with
+           params={"cat": "meter1"}, not /api/categories/meter1
+  Bug B — Wrong response parsing: the API returns
+           {"properties": [{id, value}, ...]}, not a flat dict keyed by id
+  Bug C — OCPP state type: the API returns state as an integer, not a string
+  Bug D — Missing power calculation: the API doesn't return total power directly;
+           it must be computed as power_w = sum(Vn * In) * PF
 """
 
 from unittest.mock import MagicMock, patch

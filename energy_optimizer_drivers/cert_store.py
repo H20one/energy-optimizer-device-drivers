@@ -112,7 +112,7 @@ def resolve_verify(
         # DEBUG, not INFO: pinned_path's filename embeds the IP (see
         # _pinned_path below), so logging the path is an indirect IP
         # disclosure — must not be logged at INFO or above
-        # (drivers/SECURITY.md §6.1). Fires on every TLS connection setup.
+        # (SECURITY.md §6.1). Fires on every TLS connection setup.
         logger.debug("cert_store: using pinned certificate from %s", pinned_path)
         return str(pinned_path)
 
@@ -135,7 +135,7 @@ def _pin_cert(ip: str, dest: Path, timeout: int) -> str | bool:
         return str(dest)
     except OSError as e:
         # IP intentionally omitted — must not be logged at INFO or above
-        # (drivers/SECURITY.md §6.1). The exception message and the fact
+        # (SECURITY.md §6.1). The exception message and the fact
         # that pinning failed are still useful without it.
         logger.warning(
             "cert_store: could not pin certificate, "

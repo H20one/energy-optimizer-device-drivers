@@ -1,9 +1,9 @@
 """Contract compliance tests for all registered drivers.
 
 These tests verify that every driver fulfills the requirements documented
-in drivers/docs/{device_type}.md and the BaseDriver ABC in drivers/base.py.
+in docs/contracts/{device_type}.md and the BaseDriver ABC in base.py.
 
-Run with: pytest drivers/tests/ -v
+Run with: pytest tests/ -v
 """
 
 import inspect

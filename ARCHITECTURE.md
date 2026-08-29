@@ -28,18 +28,17 @@ they give very different guarantees:
   install`s a pinned version of this package and calls drivers exactly as it always has — a plain
   Python method call, zero latency change, zero new failure mode. This is what's actually running.
 
-**Be precise about what this buys and doesn't buy** (this came up directly during the split's design
-discussion, worth restating here so it isn't re-litigated from scratch later): this repo gives
-**complete separation of logic and contract** — `base.py` is the only thing either side knows about
-the other; a driver never sees anything about Flask, SQLite, encryption, or scheduling, and the main
-app never reaches into a specific driver's internals. That was already true before the split (drivers
-already only imported from `base.py`) and stays true now. What it does **not** give is separation of
-**runtime trust** — once installed, this package's code executes with the exact same OS-level
-privileges as the rest of the main app's process, same as before the split. `SECURITY.md`'s rules
-(no imports from the app's `src`/`config`, no outbound internet, etc.) are enforced by static
-analysis (`tests/test_security_compliance.py`), not by any process wall — a genuinely malicious
-driver could still violate them if it tried hard enough. The static checks and PR review are the
-actual defense here, not an OS boundary.
+**What this design does and doesn't guarantee:** this repo gives **complete separation of logic and
+contract** — `base.py` is the only thing either side knows about the other; a driver never sees
+anything about Flask, SQLite, encryption, or scheduling, and the main app never reaches into a
+specific driver's internals. What it does **not** give is separation of **runtime trust** — once
+installed, this package's code executes with the exact same OS-level privileges as the rest of the
+main app's process. `SECURITY.md`'s rules (no imports from the app's internal code, no outbound
+internet, etc.) are enforced by static analysis (`tests/test_security_compliance.py`), not by any
+process wall — a driver that deliberately tried to violate them could still succeed. The static
+checks and PR review are the actual defense here, not an OS-level boundary. Keep this in mind when
+writing a driver: the checks catch common mistakes, but review and the contract itself are what
+actually keep this safe to depend on.
 
 ## The contract (`energy_optimizer_drivers/base.py`)
 
@@ -52,8 +51,36 @@ The **only** shared dependency between this repo and the main app. A driver:
   `None`/`False`/an empty result instead.
 
 Four device types exist today (`GRID_METER`, `PV_INVERTER`, `EV_CHARGER`, `AC_UNIT`), each with its
-own ABC in `base.py` and contract doc. Adding a fifth requires a deliberate change to both, not a
-workaround in a single driver — see `CONTRIBUTING.md`.
+own ABC in `base.py` and contract doc. **A new device type cannot be added by a contributor alone —
+it always needs a maintainer first.** See "Changes that need a maintainer, not just a PR" below for
+why and how to request one.
+
+## Changes that need a maintainer, not just a PR
+
+Most of this repo is safe to change freely within a driver you're adding or fixing. A specific,
+narrow set of changes reaches outside this repo into the main `energy-optimizer` app in ways a
+contributor here has no visibility into — opening a PR for any of these without discussing it first
+will very likely get closed, not merged silently:
+
+- **Adding a new `DeviceType`** (`base.py`). The main app has hand-written support for each existing
+  type — a dedicated typed accessor, scheduler polling job, and UI card — none of which lives in
+  this repo or updates itself. A new type here with no matching support there does nothing.
+- **Changing an ABC's method signature** in `base.py` (`get_data()`, `discover()`, `set_current()`,
+  the AC setters, etc.). The main app calls these by exact name and signature; a mismatched change
+  breaks every existing driver from the app's side, not just yours.
+- **Changing `DRIVER_CALL_TIMEOUT`** or any other contract-level constant in `base.py`. The main
+  app's own polling/scheduling logic is tuned around this value.
+- **Renaming the `energy_optimizer.drivers` entry-point group** (`registry.py`) that external
+  third-party driver packages register under. Renaming it silently breaks discovery for every
+  external driver, including the main app's own.
+- **Renaming the top-level `energy_optimizer_drivers` package.**
+
+If you need one of these — most commonly a new device type — open an issue describing the device
+and why it doesn't fit an existing type before writing any code. A maintainer needs to plan the
+matching main-app change before a new type here is useful for anything.
+
+Everything else — a new driver for an existing device type, a bug fix, improving `discover()` for an
+existing driver, adding tests — is a normal PR, no separate discussion needed.
 
 ## How the main app consumes this package
 

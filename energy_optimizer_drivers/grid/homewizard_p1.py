@@ -50,7 +50,7 @@ class HomewizardP1Driver(GridMeterDriver):
     driver_id = "homewizard_p1"
     name = "HomeWizard P1 Dongle"
     manufacturer = "HomeWizard"
-    builder = "H2Oone"
+    builder = "H20one"
     device_type = DeviceType.GRID_METER
     connection_type = ConnectionType.WIFI
 
@@ -158,8 +158,9 @@ class HomewizardP1Driver(GridMeterDriver):
         # 12 s (ceil(253/50) × 2.5 s) after the as_completed timeout fires.
         # Lower concurrency than a raw port-scanner would use — this still sweeps
         # the full /24 (an unavoidable, consent-gated footprint on whatever network
-        # this runs on, see IMPROVEMENT_ROADMAP.md), but 15 concurrent connections
-        # looks meaningfully less like an attack tool to network monitoring than 50,
+        # this runs on — the main app requires explicit user consent before
+        # triggering any discover() call), but 15 concurrent connections looks
+        # meaningfully less like an attack tool to network monitoring than 50,
         # at a barely-noticeable cost on a local, low-latency LAN.
         pool = ThreadPoolExecutor(max_workers=15, thread_name_prefix="discovery")
         try:
@@ -170,7 +171,7 @@ class HomewizardP1Driver(GridMeterDriver):
                     if result:
                         found.append(result)
                         # DEBUG, not INFO: result["ip"] must not be logged at
-                        # INFO or above (drivers/SECURITY.md §6.1). Discovery
+                        # INFO or above (SECURITY.md §6.1). Discovery
                         # results are already surfaced to the user in the UI.
                         logger.debug(
                             "Discovery: found HomeWizard device at %s", result["ip"]

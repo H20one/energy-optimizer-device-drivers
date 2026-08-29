@@ -60,7 +60,7 @@ class AuroraRS485Driver(PVInverterDriver):
     driver_id = "aurora_rs485"
     name = "Aurora Power-One PVI"
     manufacturer = "Power-One (ABB)"
-    builder = "H2Oone"
+    builder = "H20one"
     device_type = DeviceType.PV_INVERTER
     connection_type = ConnectionType.SERIAL
 

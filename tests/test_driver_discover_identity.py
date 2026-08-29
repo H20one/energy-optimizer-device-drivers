@@ -1,10 +1,10 @@
 """Tests for the "identity" (serial/MAC) extraction added to discover() probes.
 
-Covers drivers/grid/homewizard_p1.py's _probe_homewizard and
-drivers/ac/daikin_brp.py's _probe_daikin — the two drivers that support
-device-reconnect-by-identity (src/devices/__init__.py's reconnect_device).
-Response shapes below are the real payloads captured live from the user's
-actual devices, not fabricated examples.
+Covers energy_optimizer_drivers/grid/homewizard_p1.py's _probe_homewizard and
+energy_optimizer_drivers/ac/daikin_brp.py's _probe_daikin — the two drivers
+that support device-reconnect-by-identity in the main energy-optimizer app.
+All response shapes below are fabricated example data shaped to match each
+device's real response format, not captured from any real device.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class TestProbeHomewizardIdentity:
         with patch(
             "energy_optimizer_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
         ):
-            result = _probe_homewizard("192.168.0.99")
+            result = _probe_homewizard("192.0.2.99")
 
         assert result is None
 
@@ -65,7 +65,9 @@ class TestProbeHomewizardIdentity:
 
 
 class TestProbeDaikinIdentity:
-    _REAL_BASIC_INFO = (
+    # Fabricated example data shaped to match a real device's basic_info response
+    # format, not captured from any real device.
+    _SAMPLE_BASIC_INFO = (
         "ret=OK,type=aircon,reg=eu,dst=1,ver=4_2_303,rev=30610C5A,pow=0,err=0,"
         "location=0,name=%4c%69%76%69%6e%67%20%52%6f%6f%6d,icon=0,instform=0,"
         "method=polling,port=30050,id=00000000-0000-0000-0000-000000000000,pw=,"
@@ -75,7 +77,7 @@ class TestProbeDaikinIdentity:
     )
 
     def test_returns_identity_from_real_device_response(self):
-        mock_response = MagicMock(status_code=200, text=self._REAL_BASIC_INFO)
+        mock_response = MagicMock(status_code=200, text=self._SAMPLE_BASIC_INFO)
         with patch("energy_optimizer_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
             result = _probe_daikin("192.0.2.153")
 
@@ -93,7 +95,7 @@ class TestProbeDaikinIdentity:
     def test_returns_none_when_not_aircon(self):
         mock_response = MagicMock(status_code=200, text="ret=OK,type=other")
         with patch("energy_optimizer_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
-            result = _probe_daikin("192.168.0.99")
+            result = _probe_daikin("192.0.2.99")
 
         assert result is None
 

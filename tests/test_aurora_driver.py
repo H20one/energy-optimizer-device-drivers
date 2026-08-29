@@ -1,12 +1,14 @@
-"""Regression tests for the Aurora RS-485 driver bug fixes.
+"""Regression tests for the Aurora RS-485 driver, guarding against three specific
+mistakes that are easy to make given how the Aurora binary protocol actually works:
 
-Covers three bugs introduced when inverter_reader.py was ported into the driver system:
-
-  Bug E — Frame length: request must be exactly 10 bytes (8 data + 2 CRC).
-           CRC is computed over all 8 data bytes, not a subset.
-  Bug F — Energy decoding: must use struct.unpack(">I") (uint32), not (">f") (float).
-  Bug G — No address check on response: byte 0 is the Global Alarm State (0 = no alarms),
-           NOT an echo of the request address. Old code rejected every valid response.
+  Bug E — Frame length: a request must be exactly 10 bytes (8 data + 2 CRC).
+           The CRC is computed over all 8 data bytes, not a subset.
+  Bug F — Energy decoding: values must be read with struct.unpack(">I") (uint32),
+           not (">f") (float) — using the wrong format silently produces garbage values
+           rather than raising.
+  Bug G — Response address check: byte 0 of a response is the Global Alarm State
+           (0 = no alarms), NOT an echo of the request's target address — treating it
+           as an address echo incorrectly rejects every valid response.
 """
 
 import struct
@@ -294,7 +296,8 @@ class TestAuroraAlarmStateResponse:
 # ---------------------------------------------------------------------------
 # get_status(): a genuinely missing port ("error") vs. the port opening fine
 # but the inverter not responding ("sleeping" — indistinguishable from the
-# inverter's normal overnight power-down). See C8 in IMPROVEMENT_ROADMAP.md.
+# inverter's normal overnight power-down, since a solar inverter with no
+# sunlight simply stops responding rather than reporting an explicit state).
 # ---------------------------------------------------------------------------
 
 

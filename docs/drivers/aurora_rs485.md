@@ -57,10 +57,9 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="a
 
 Reload: `sudo udevadm control --reload-rules && sudo udevadm trigger`
 
-> The repo's checked-in `docker-compose.override.yml` currently maps the raw device node
-> (`/dev/ttyUSB0:/dev/ttyUSB1`) rather than this symlink, which reintroduces the reboot-renumbering
-> risk the symlink avoids. See `docs/RASPBERRY_PI_DEPLOYMENT.md`'s RS-485 section for the trade-off
-> and how to switch to the symlink-based mapping shown above.
+> Mapping the raw device node directly (e.g. `/dev/ttyUSB0:/dev/ttyUSB1`) instead of the symlink
+> works too, but reintroduces the reboot-renumbering risk the symlink exists to avoid — worth
+> knowing if you see this driver intermittently lose its port after a host reboot.
 
 ---
 

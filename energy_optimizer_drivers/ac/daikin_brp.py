@@ -185,7 +185,7 @@ class DaikinBrpDriver(ACUnitDriver):
     driver_id = "daikin_brp"
     name = "Daikin BRP WiFi Adapter"
     manufacturer = "Daikin"
-    builder = "H2Oone"
+    builder = "H20one"
     device_type = DeviceType.AC_UNIT
     connection_type = ConnectionType.WIFI
 
@@ -325,7 +325,7 @@ class DaikinBrpDriver(ACUnitDriver):
                     if result:
                         found.append(result)
                         # DEBUG, not INFO: result["ip"] must not be logged at
-                        # INFO or above (drivers/SECURITY.md §6.1). Discovery
+                        # INFO or above (SECURITY.md §6.1). Discovery
                         # results are already surfaced to the user in the UI.
                         logger.debug(
                             "Daikin discovery: found adapter at %s", result["ip"]
@@ -377,7 +377,7 @@ class DaikinBrpDriver(ACUnitDriver):
             if parsed.get("ret") != "OK":
                 self._last_error = f"Adapter returned ret={parsed.get('ret')!r}"
                 # IP intentionally omitted — must not be logged at INFO or
-                # above (drivers/SECURITY.md §6.1).
+                # above (SECURITY.md §6.1).
                 logger.warning("Daikin %s: unexpected ret=%r", path, parsed.get("ret"))
                 return None
             # Keep the control-info cache warm.
@@ -418,7 +418,7 @@ class DaikinBrpDriver(ACUnitDriver):
         try:
             url = f"{self._base_url}{_PATH_SET_CONTROL}?{urlencode(params)}"
             # DEBUG, not INFO: fires on every AC command, and the IP must not
-            # be logged at INFO or above (drivers/SECURITY.md §6.1).
+            # be logged at INFO or above (SECURITY.md §6.1).
             logger.debug("Daikin set_control_info params=%s", params)
             r = requests.get(url, timeout=self._timeout)
             r.raise_for_status()
@@ -509,7 +509,7 @@ class DaikinBrpDriver(ACUnitDriver):
             # Second line of defense beyond _get()'s own RequestException catch —
             # covers anything else (e.g. a response-decode issue) that isn't a
             # RequestException, matching every other builtin driver's
-            # "drivers never raise" contract (drivers/SECURITY.md §5.1).
+            # "drivers never raise" contract (SECURITY.md §5.1).
             self._last_error = str(e)
             logger.warning("Daikin get_data failed: %s", e)
             return None

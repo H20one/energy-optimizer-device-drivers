@@ -2,6 +2,26 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.2 — 2026-08-29
+
+### Security
+- **Removed real device data (a device serial number, a device MAC address, and a real room name)
+  that had been accidentally committed in a test fixture, mislabeled as "real payloads captured
+  live" — replaced with clearly fabricated example data.** If you cloned this repo at `v0.1.0` or
+  `v0.1.1`, that data is present in your local copy's history; please discard those clones. See the
+  project's own advisory/release notes for this version for further detail.
+
+### Changed
+- Full documentation pass for public readability: removed several references to internal-only
+  tracking codes and non-public documents that a reader outside the project has no way to resolve,
+  clarified collaborator-facing phrasing into plain documentation, and fixed a number of file paths
+  left over from the original extraction that pointed at a directory structure this repo doesn't
+  actually have.
+- Added an explicit, consolidated list of changes that require maintainer coordination before a PR
+  will be considered (new device types, ABC signature changes, contract constants, the entry-point
+  group name) — previously only "you can't add a device type" was stated, with no explanation of why
+  or what to do instead. See `ARCHITECTURE.md`'s "Changes that need a maintainer, not just a PR".
+
 ## 0.1.1 — 2026-08-29
 
 ### Added
@@ -20,8 +40,8 @@ All notable changes to the device drivers package are documented here.
 
 ### Added
 - Initial extraction from `energy-optimizer`'s `drivers/` directory into this standalone,
-  pip-installable package (N25 in `energy-optimizer`'s roadmap) — no driver logic changed, only the
-  import path (`drivers.*` → `energy_optimizer_drivers.*`) and packaging.
+  pip-installable package — no driver logic changed, only the import path (`drivers.*` →
+  `energy_optimizer_drivers.*`) and packaging.
 - Four builtin drivers: `homewizard_p1` (grid meter), `aurora_rs485` (PV inverter, RS-485), `alfen_eve`
   (EV charger), `daikin_brp` (AC unit).
 - CI runs `test_contract_compliance.py` + `test_security_compliance.py` on every push/PR.

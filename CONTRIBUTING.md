@@ -23,7 +23,13 @@ Drivers must target one of the fixed device types defined in `DeviceType`:
 | `DeviceType.EV_CHARGER`  | `energy_optimizer_drivers/ev/`   | `EVChargerDriver`  |
 | `DeviceType.AC_UNIT`     | `energy_optimizer_drivers/ac/`   | `ACUnitDriver`     |
 
-You cannot invent new device types without modifying `base.py` — this is intentional.
+**Your device doesn't fit any of these four?** You can't add a new device type by yourself, even
+though `base.py` lives in this repo — the main `energy-optimizer` app has hand-written support
+(a typed accessor, a scheduler job, a UI card) for each existing type that doesn't exist yet for a
+new one, and none of that lives here. See
+[ARCHITECTURE.md](ARCHITECTURE.md#changes-that-need-a-maintainer-not-just-a-pr) for the full list of
+changes like this, and open an issue describing your device before writing any code — a maintainer
+needs to plan the matching main-app change first.
 
 ---
 

@@ -49,7 +49,7 @@ class AlfenEveDriver(EVChargerDriver):
     driver_id = "alfen_eve"
     name = "Alfen EVE Single Pro-line"
     manufacturer = "Alfen"
-    builder = "H2Oone"
+    builder = "H20one"
     device_type = DeviceType.EV_CHARGER
     connection_type = ConnectionType.WIFI
 

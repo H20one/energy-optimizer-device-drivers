@@ -1,12 +1,12 @@
 """Security compliance tests for all driver code.
 
 These tests statically scan driver source files for violations of the
-security contract defined in drivers/SECURITY.md.
+security contract defined in SECURITY.md.
 
 Catches: data exfiltration patterns, credential logging, forbidden
 function calls, filesystem access, process spawning, and more.
 
-Run with: pytest drivers/tests/ -v
+Run with: pytest tests/ -v
 """
 
 import ast
@@ -20,11 +20,11 @@ from energy_optimizer_drivers.registry import _load_builtin_drivers
 _load_builtin_drivers()
 
 _DRIVERS_ROOT = Path(__file__).parent.parent
-# Scan both the per-type driver implementations (drivers/{grid,pv,ev,ac}/*.py)
-# and the root-level shared infrastructure (drivers/base.py, cert_store.py,
-# registry.py) — the latter was previously invisible to this suite entirely,
-# despite cert_store.py doing the most security-sensitive TLS/filesystem work
-# in the whole driver layer.
+# Scan both the per-type driver implementations
+# (energy_optimizer_drivers/{grid,pv,ev,ac}/*.py) and the root-level shared
+# infrastructure (base.py, cert_store.py, registry.py) — cert_store.py does
+# the most security-sensitive TLS/filesystem work in the whole driver layer,
+# so it needs the same scrutiny as any individual driver.
 _DRIVER_FILES = [
     f
     for f in list(_DRIVERS_ROOT.glob("*/[!_]*.py")) + list(_DRIVERS_ROOT.glob("[!_]*.py"))
@@ -33,7 +33,7 @@ _DRIVER_FILES = [
 _DRIVER_FILE_IDS = [str(f.relative_to(_DRIVERS_ROOT)) for f in _DRIVER_FILES]
 
 # cert_store.py is the documented, deliberate exception to the "no filesystem
-# writes" rule (drivers/SECURITY.md §3.2: "the cert store handles all
+# writes" rule (SECURITY.md §3.2: "the cert store handles all
 # filesystem I/O on the driver's behalf" — that's its entire purpose, TOFU
 # certificate pinning to data/certs/). Exempt it from that one check only;
 # it's still scanned by every other rule in this file.
@@ -310,7 +310,7 @@ class TestNoOutboundInternet:
 class TestNoFileSystemWrites:
     """Drivers must not write to the filesystem.
 
-    Exception: cert_store.py — see drivers/SECURITY.md §3.2, it's the
+    Exception: cert_store.py — see SECURITY.md §3.2, it's the
     designated shared filesystem I/O handler for TOFU cert pinning.
     """
 
@@ -394,7 +394,7 @@ class TestNoGlobalSSLDisable:
 class TestNoIPAddressLogging:
     """Drivers must not log IP addresses at INFO level or above.
 
-    drivers/SECURITY.md §6.1: "No IPs logged at INFO or above" — DEBUG is
+    SECURITY.md §6.1: "No IPs logged at INFO or above" — DEBUG is
     fine. Only the *argument* expressions passed to a logger call are
     checked (e.g. the value behind a %s placeholder), never the literal
     message text itself — a message like "could not determine local IP"

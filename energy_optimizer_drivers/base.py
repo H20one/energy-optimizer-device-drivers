@@ -3,7 +3,7 @@
 This module is the ONLY shared dependency between the app and drivers.
 All drivers import from here and implement these interfaces.
 
-See drivers/docs/contracts/ for the full data contract specification per device type.
+See docs/contracts/ for the full data contract specification per device type.
 """
 
 from abc import ABC, abstractmethod
@@ -19,7 +19,7 @@ class DeviceType(StrEnum):
     """Fixed set of device types that drivers can be created for.
 
     Adding a new type requires a corresponding ABC in this module
-    and a contract doc in drivers/docs/contracts/.
+    and a contract doc in docs/contracts/.
     """
 
     GRID_METER = "grid_meter"
@@ -121,7 +121,7 @@ class DiscoveryResult:
 
 
 class GridMeterData(TypedDict, total=False):
-    """Data contract for grid meters. See drivers/docs/contracts/grid_meter.md."""
+    """Data contract for grid meters. See docs/contracts/grid_meter.md."""
 
     # REQUIRED — must always be a real number, never None
     grid_power_w: float  # Signed: + import, - export
@@ -144,7 +144,7 @@ class GridMeterData(TypedDict, total=False):
 
 
 class PVInverterData(TypedDict, total=False):
-    """Data contract for PV inverters. See drivers/docs/contracts/pv_inverter.md."""
+    """Data contract for PV inverters. See docs/contracts/pv_inverter.md."""
 
     # REQUIRED — must always be a real number, never None
     solar_power_w: float  # Current AC output (0.0 at night)
@@ -160,7 +160,7 @@ class PVInverterData(TypedDict, total=False):
 
 
 class EVChargerData(TypedDict, total=False):
-    """Data contract for EV chargers. See drivers/docs/contracts/ev_charger.md."""
+    """Data contract for EV chargers. See docs/contracts/ev_charger.md."""
 
     # REQUIRED — must always be a real value, never None
     state: str  # "available" | "connected" | "charging" | "error"
@@ -179,7 +179,7 @@ class EVChargerData(TypedDict, total=False):
 
 
 class ACUnitData(TypedDict, total=False):
-    """Data contract for AC units. See drivers/docs/contracts/ac_unit.md."""
+    """Data contract for AC units. See docs/contracts/ac_unit.md."""
 
     # REQUIRED — must always be a real value, never None
     mode: str  # "off" | "cool" | "heat" | "fan" | "dry" | "auto"

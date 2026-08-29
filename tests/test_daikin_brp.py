@@ -222,14 +222,13 @@ class TestDaikinBrpDriver:
             assert data["fan_speed"] == expected, f"f_rate={f_rate}"
 
     def test_get_data_returns_none_on_non_request_exception(self, driver):
-        """Regression test for H7: a non-RequestException failure (e.g. a
-        response-decode error) must be caught and return None, not propagate.
+        """A non-RequestException failure (e.g. a response-decode error) must be
+        caught and return None, not propagate.
 
-        `_get()`'s own try/except only catches `RequestException` — before
-        H7, nothing further up the call chain caught anything broader, so an
-        error like this would have raised out of `get_data()` entirely,
-        violating the "drivers never raise" contract every other builtin
-        driver follows.
+        `_get()`'s own try/except only catches `RequestException` — without a
+        broader catch further up the call chain, an error like this would raise
+        out of `get_data()` entirely, violating the "drivers never raise" contract
+        every builtin driver follows.
         """
 
         class _BadTextResponse:
@@ -448,7 +447,8 @@ class TestDaikinBrpDriver:
         assert ok is False
 
     def test_set_mode_returns_false_on_non_request_exception(self, driver):
-        """Regression test for H7 — see test_get_data_returns_none_on_non_request_exception."""
+        """Same non-RequestException-must-not-propagate guarantee as
+        test_get_data_returns_none_on_non_request_exception, for this method."""
 
         class _BadTextResponse:
             status_code = 200
@@ -566,7 +566,8 @@ class TestDaikinBrpDriver:
         assert ok is False
 
     def test_set_temperature_returns_false_on_non_request_exception(self, driver):
-        """Regression test for H7 — see test_get_data_returns_none_on_non_request_exception."""
+        """Same non-RequestException-must-not-propagate guarantee as
+        test_get_data_returns_none_on_non_request_exception, for this method."""
 
         class _BadTextResponse:
             status_code = 200
@@ -642,7 +643,8 @@ class TestDaikinBrpDriver:
         assert ok is False
 
     def test_set_fan_speed_returns_false_on_non_request_exception(self, driver):
-        """Regression test for H7 — see test_get_data_returns_none_on_non_request_exception."""
+        """Same non-RequestException-must-not-propagate guarantee as
+        test_get_data_returns_none_on_non_request_exception, for this method."""
 
         class _BadTextResponse:
             status_code = 200

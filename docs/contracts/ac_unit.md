@@ -55,7 +55,7 @@ real device capability or require lossy remapping in both directions. Instead:
   `get_data()` should always be accepted by `set_fan_speed()`).
 - The frontend renders whatever speed values a given driver reports, rather than assuming a fixed
   set of buttons.
-- **Reference implementation** (`drivers/ac/daikin_brp.py`): `"auto"`, `"silent"`, and the numeric
+- **Reference implementation** (`energy_optimizer_drivers/ac/daikin_brp.py`): `"auto"`, `"silent"`, and the numeric
   steps `"1"` through `"5"`. This is what actually ships today — if you're building a second AC
   driver, match this vocabulary where your device has equivalent steps so the frontend's existing
   fan-speed UI works without changes, but don't invent values your device can't really do.
@@ -146,7 +146,7 @@ Drivers that support auto-detection override the `discover()` classmethod.
 ## Example Return Value
 
 ```python
-# Daikin BRP adapter (cooling at 22°C) — see drivers/docs/drivers/daikin_brp.md
+# Daikin BRP adapter (cooling at 22°C) — see ../drivers/daikin_brp.md
 {
     "mode": "cool",
     "power_w": 0.0,          # BRP local API doesn't expose instantaneous power — always 0.0
@@ -175,4 +175,4 @@ Drivers that support auto-detection override the `discover()` classmethod.
 
 | Driver ID     | Device                        | Connection | Reference                                                    |
 | -------------- | ------------------------------ | ----------- | -------------------------------------------------------------- |
-| `daikin_brp`  | Daikin split system (BRP local API, LAN) | WiFi       | [drivers/docs/drivers/daikin_brp.md](../drivers/daikin_brp.md) |
+| `daikin_brp`  | Daikin split system (BRP local API, LAN) | WiFi       | [daikin_brp.md](../drivers/daikin_brp.md) |
