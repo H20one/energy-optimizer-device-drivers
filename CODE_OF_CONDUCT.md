@@ -51,12 +51,9 @@ representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainer(s) responsible for enforcement at:
-
-<!-- TODO(maintainer): replace with your preferred contact method — a project
-     email, or "via a private GitHub security advisory" — before relying on
-     this document. Left as a placeholder rather than guessing at one. -->
-**[maintainer contact — to be filled in]**
+reported to the maintainer(s) responsible for enforcement by email at
+**support@h20one.com**. Please do not report Code of Conduct violations via a
+public GitHub issue — email keeps the report private, for everyone involved.
 
 All complaints will be reviewed and investigated promptly and fairly.
 
