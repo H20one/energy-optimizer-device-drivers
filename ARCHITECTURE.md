@@ -2,8 +2,8 @@
 
 ## What this is
 
-A pip-installable Python package of device driver plugins for
-[energy-optimizer](https://github.com/H20one/energy-optimizer), a self-hosted home-energy dashboard.
+A pip-installable Python package of device driver plugins for energy-optimizer, a self-hosted
+home-energy dashboard.
 Each driver adapts one device's protocol (HTTP, HTTPS, or RS-485 serial) into a fixed data contract
 the main app understands.
 
