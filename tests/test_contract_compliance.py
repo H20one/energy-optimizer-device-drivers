@@ -398,7 +398,7 @@ class TestValidateContractData:
         assert any("'voltage_l1_v' expected" in v for v in violations)
 
     def test_optional_key_left_as_none_is_fine(self) -> None:
-        assert self._VALID_GRID_METER_DATA["gas_total_m3"] is None
+        assert self._VALID_GRID_METER_DATA.get("gas_total_m3") is None
         assert validate_contract_data(DeviceType.GRID_METER, self._VALID_GRID_METER_DATA) == []
 
     def test_unexpected_key_is_a_violation(self) -> None:

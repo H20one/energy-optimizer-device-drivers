@@ -23,6 +23,7 @@ SECURITY.md §1.4.
 """
 
 import types
+from collections.abc import Mapping
 from typing import Any, Union, get_type_hints
 
 from .base import ACUnitData, DeviceType, EVChargerData, GridMeterData, PVInverterData
@@ -35,8 +36,13 @@ _CONTRACT_BY_DEVICE_TYPE: dict[DeviceType, type] = {
 }
 
 
-def validate_contract_data(device_type: DeviceType, data: dict[str, Any]) -> list[str]:
+def validate_contract_data(device_type: DeviceType, data: Mapping[str, Any]) -> list[str]:
     """Check `data` against the TypedDict data contract for `device_type`.
+
+    `data` is typed as `Mapping`, not `dict`, specifically so a driver's actual
+    `GridMeterData`/etc. TypedDict return value can be passed directly — a
+    TypedDict is not assignable to `dict[str, Any]` under static type checking
+    (mutability/invariance), but it does satisfy `Mapping[str, Any]`.
 
     Returns a list of human-readable violation descriptions — empty if `data`
     fully complies. Never raises on a non-compliant `data`; callers decide

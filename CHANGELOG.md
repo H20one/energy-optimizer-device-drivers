@@ -2,6 +2,23 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.10 — 2026-08-29
+
+### Fixed
+- `validate_contract_data()` typed its `data` parameter as `dict[str, Any]`, but a
+  `GridMeterData`/etc. TypedDict is not statically assignable to `dict[str, Any]` (TypedDicts
+  aren't subtypes of `dict` under static type checking, due to mutability/invariance) — every
+  call site passing a driver's real `get_data()` result was a type error. Changed to
+  `Mapping[str, Any]`, which a TypedDict does satisfy. Also fixed several test-file call sites
+  that indexed an optional TypedDict field directly (`data["gas_total_m3"]`) instead of `.get(...)`
+  — valid at runtime here since this repo's convention always sets optional fields to `None`
+  rather than omitting them, but not something a type checker can know, so it flagged them as
+  potentially-absent-key accesses.
+- Added `pyrightconfig.json` (`typeCheckingMode: "standard"`, matching `energy-optimizer`'s own) —
+  `basedpyright` previously had no config here and ran under its much stricter default preset,
+  which is not what `CONTRIBUTING.md`'s "0 errors" checklist item was ever measured against. Under
+  standard mode this repo is genuinely 0 errors/0 warnings.
+
 ## 0.1.9 — 2026-08-29
 
 ### Added

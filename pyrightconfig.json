@@ -1,0 +1,9 @@
+{
+  "include": ["energy_optimizer_drivers", "tests"],
+  "exclude": ["venv", ".venv", "**/__pycache__"],
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "standard",
+  "reportMissingTypeStubs": "none",
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning"
+}

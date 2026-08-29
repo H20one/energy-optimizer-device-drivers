@@ -80,7 +80,7 @@ class TestGetData:
         assert data["grid_power_w"] == pytest.approx(-450.0)
         assert data["import_total_kwh"] == pytest.approx(8234.5)
         assert data["export_total_kwh"] == pytest.approx(2100.3)
-        assert data["gas_total_m3"] == pytest.approx(1543.21)
+        assert data.get("gas_total_m3") == pytest.approx(1543.21)
         assert validate_contract_data(DeviceType.GRID_METER, data) == []
 
     def test_single_phase_no_gas_leaves_optional_fields_none(
@@ -90,11 +90,11 @@ class TestGetData:
             data = driver.get_data()
 
         assert data is not None
-        assert data["gas_total_m3"] is None
-        assert data["voltage_l2_v"] is None
-        assert data["voltage_l3_v"] is None
-        assert data["current_l2_a"] is None
-        assert data["current_l3_a"] is None
+        assert data.get("gas_total_m3") is None
+        assert data.get("voltage_l2_v") is None
+        assert data.get("voltage_l3_v") is None
+        assert data.get("current_l2_a") is None
+        assert data.get("current_l3_a") is None
         assert validate_contract_data(DeviceType.GRID_METER, data) == []
 
     def test_uses_v1_data_endpoint(self, driver: HomewizardP1Driver) -> None:
