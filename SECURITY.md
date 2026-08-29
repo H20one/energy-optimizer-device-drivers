@@ -2,6 +2,12 @@
 
 This document defines the security rules and data safety requirements that **every driver** (builtin or third-party) must adhere to. Violations will be flagged by the automated driver reviewer agent and will block integration.
 
+> **Zero tolerance: no real device data in this repo, ever.** A real serial number, MAC address,
+> device name, hardware ID, or any other value that identifies a specific physical unit must never
+> appear in source code, test fixtures, docstrings, comments, or documentation — not even as "a
+> real example to be helpful." See §1.4 below for the full rule and why it exists independently of
+> credential safety, which this is not the same thing as.
+
 ---
 
 ## Scope
@@ -55,6 +61,36 @@ Drivers **MUST NOT**:
 
 - Aggregate or correlate data across multiple polling cycles for purposes other than the immediate return value.
 - Create local files, databases, or caches outside of the data returned through `get_data()`.
+
+### 1.4 No Real Device Data Anywhere in This Repo
+
+This is distinct from credential safety (§1.2, about secrets a driver handles at *runtime*) — this
+rule is about what gets *committed*, and it applies to test fixtures, docstrings, comments, example
+config in docs, and PR descriptions, not just driver code that executes.
+
+A driver is meant to work with **every device of the brand/model it targets**, not only the one
+specific unit its author happens to own. Writing it against real captured data from your own device
+is exactly how driver logic quietly ends up narrower than it should be — hardcoded assumptions that
+happen to match your unit's firmware version, region, or configuration, which then breaks for anyone
+else's. Fabricated data shaped to match the protocol forces you to write against the *format*, not
+one instance of it.
+
+**MUST NOT**, under any circumstance, including "as a realistic example":
+- Commit a real serial number, MAC address, device ID, hostname, or any other value that identifies
+  a specific physical unit — in test fixtures, docstrings, comments, or documentation.
+- Commit a real device name, room label, or any other value a user assigned to their own device.
+- Commit a real IP address from an actual deployment (use the `192.168.1.x` / `192.0.2.x`
+  documentation ranges already used throughout this repo).
+
+**MUST** instead:
+- Use fabricated example data shaped to match the device's real response format — same field names,
+  same value types, same general structure, invented values.
+- If you need to test against something with realistic *shape* but can't fabricate it confidently
+  (e.g. an unusual field encoding), describe the shape in the PR description for review rather than
+  pasting a real captured response into a commit.
+- Design driver logic (parsing, matching, discovery) against the device's **documented protocol**,
+  not the specific quirks of the one unit you tested against — if your device has a firmware-specific
+  quirk, handle it as an explicit, commented special case, not as the only code path.
 
 ---
 
@@ -176,6 +212,8 @@ Drivers **MUST NOT**:
   messages above DEBUG level **(policy only — no automated check)**.
 - Device identifiers in `discover()` results must only include what's needed for configuration
   (e.g. IP address), not tracking identifiers **(policy only — no automated check)**.
+- This is about *runtime* logging behavior. For the separate, zero-tolerance rule about never
+  *committing* a real identifier into this repo's code/tests/docs in the first place, see §1.4.
 
 ---
 

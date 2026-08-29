@@ -278,7 +278,14 @@ Override `setup_guide()` to return a Markdown string that helps users connect th
 
 ## Testing
 
-Write tests for your driver in `tests/test_{driver_id}.py`. Mock all network/serial I/O:
+Write tests for your driver in `tests/test_{driver_id}.py`. Mock all network/serial I/O.
+
+**Never use real captured data from your own device — always fabricate example data shaped to
+match the protocol.** This isn't just a privacy rule (see [SECURITY.md](SECURITY.md) §1.4) — a
+driver written and tested against your one specific unit's real responses tends to quietly assume
+that unit's firmware version, region, or configuration, which then breaks for anyone else with the
+same device. Testing against fabricated data that matches the documented format keeps the driver
+correct for the whole device family, not just the copy you own.
 
 ```python
 from unittest.mock import patch
@@ -313,6 +320,8 @@ def test_get_data_failure():
 - [ ] `get_data()` returns `None` on any failure (never raises)
 - [ ] `config_schema()` marks passwords as `type: "password"`
 - [ ] No imports from `src/` or `config/`
+- [ ] No real serial numbers, MAC addresses, device/room names, or deployment IPs anywhere in the
+      diff — test fixtures use fabricated data shaped to match the protocol, not a real capture
 - [ ] Tests pass with mocked I/O
 - [ ] `basedpyright energy_optimizer_drivers/` reports 0 errors
 

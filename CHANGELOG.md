@@ -2,6 +2,17 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.3 — 2026-08-29
+
+### Added
+- New zero-tolerance rule, `SECURITY.md` §1.4: no real device data (serial numbers, MAC addresses,
+  device/room names, deployment IPs) may ever be committed anywhere in this repo, including test
+  fixtures — fabricated data shaped to match the protocol only. This is a correctness rule as much
+  as a privacy one: a driver written against one real device's actual responses tends to quietly
+  assume that unit's specific firmware/region/config, which then doesn't generalize to the rest of
+  the device family it's supposed to support. Cross-referenced from `CONTRIBUTING.md`'s testing
+  section and checklist, `CLAUDE.md`, and the driver-reviewer agent's zero-tolerance list.
+
 ## 0.1.2 — 2026-08-29
 
 ### Security

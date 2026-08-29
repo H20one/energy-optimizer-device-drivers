@@ -219,5 +219,10 @@ The following findings result in **immediate REJECTED status** regardless of eve
 5. Any file system writes
 6. Any `pickle`/`marshal` deserialization
 7. Any evidence of intentional data collection beyond the device contract
+8. **Any real device data committed anywhere in the PR** — a real serial number, MAC address,
+   device ID, hostname, device/room name, or an IP address that looks like it came from an actual
+   deployment rather than a documentation range (`192.168.1.x`/`192.0.2.x`), in test fixtures,
+   docstrings, comments, or docs. See `SECURITY.md` §1.4 — check test fixtures and example
+   responses specifically, not just the driver logic itself.
 
 **When in doubt, flag it.** False positives are acceptable. False negatives are not.
