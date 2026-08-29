@@ -99,7 +99,8 @@ concerns of its own.
 
 ## What this repo deliberately does not do
 
-- No deployment, no Dockerfile, no running service — see `CLAUDE.md`.
+- No deployment, no Dockerfile, no running service — this package is pure Python, installed
+  in-process into the main app's container.
 - No knowledge of how device config is stored or encrypted at rest (that's entirely the main app's
   concern — `src/devices/__init__.py`'s Fernet encryption, PBKDF2 key derivation, etc.).
 - No knowledge of scheduling/polling cadence — the main app's scheduler decides how often

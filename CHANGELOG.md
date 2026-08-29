@@ -2,6 +2,20 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.5 — 2026-08-29
+
+### Changed
+- `CLAUDE.md` (AI-assisted development working notes) is no longer tracked in git — added to
+  `.gitignore`. Its content was purely internal process notes (versioning reminders, cross-repo
+  coordination rules) that consistently pointed to `ARCHITECTURE.md`/`SECURITY.md`/`CONTRIBUTING.md`
+  rather than duplicating them, so contributors lose nothing by it not being in the repo.
+  `.github/agents/driver-reviewer.agent.md` is unaffected and remains tracked as-is — it's an active
+  part of the documented PR review process (see `SECURITY.md`'s "Enforcement"), not internal-only
+  notes, and removing it would actually remove a piece of process this repo's own docs describe.
+- `ARCHITECTURE.md`'s "What this repo deliberately does not do" no longer points to `CLAUDE.md` for
+  the no-deployment note, since that file is no longer visible to contributors — the point is stated
+  inline instead.
+
 ## 0.1.4 — 2026-08-29
 
 ### Fixed

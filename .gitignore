@@ -40,3 +40,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI-assisted development working notes (internal, not needed by contributors)
+CLAUDE.md
