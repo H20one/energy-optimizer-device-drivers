@@ -15,7 +15,8 @@ knows anything about Flask, SQLite, encryption, scheduling, or HTTP routes.** Th
 (`base.py`) is the *only* thing shared between this repo and the main app.
 
 **New here?** Read this file top-to-bottom, then follow [CONTRIBUTING.md](CONTRIBUTING.md) to write
-your first driver.
+your first driver. Participation in this project is governed by our
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 

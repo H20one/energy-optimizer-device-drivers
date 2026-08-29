@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in an existing driver isn't working correctly
+labels: ["bug"]
+body:
+  - type: input
+    id: driver
+    attributes:
+      label: Which driver?
+      placeholder: e.g. homewizard_p1
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: >-
+        Do not paste real device data here — a real serial number, MAC address, device/room name, or
+        deployment IP. Redact or fabricate values shaped like the real ones instead (see SECURITY.md
+        §1.4).
+      render: shell

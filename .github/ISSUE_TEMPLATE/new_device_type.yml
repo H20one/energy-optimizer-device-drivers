@@ -1,0 +1,34 @@
+name: New device type request
+description: Your device doesn't fit grid meter / PV inverter / EV charger / AC unit
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A new `DeviceType` can't be added by a contributor alone — it needs matching support in the
+        main `energy-optimizer` app (a typed accessor, a scheduler job, a UI card) that doesn't exist
+        yet and doesn't live in this repo. See [ARCHITECTURE.md](../../ARCHITECTURE.md#changes-that-need-a-maintainer-not-just-a-pr)
+        for why. Please describe the device below before writing any code.
+  - type: input
+    id: device
+    attributes:
+      label: Device (brand + model)
+      placeholder: e.g. Acme SmartBattery 5000
+    validations:
+      required: true
+  - type: textarea
+    id: why-no-fit
+    attributes:
+      label: Why doesn't this fit an existing device type?
+      description: Grid meter, PV inverter, EV charger, or AC unit — what's missing or different?
+    validations:
+      required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Protocol / API documentation
+      description: Link to the device's API docs or protocol spec, if available.
+  - type: textarea
+    id: data
+    attributes:
+      label: What data would this device type expose, and what would the app control?
