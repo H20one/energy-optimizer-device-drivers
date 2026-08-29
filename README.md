@@ -60,9 +60,9 @@ energy-optimizer-device-drivers/
 
 ```
 ┌─────────────────────────────┐      ┌──────────────┐      ┌────────────────┐
-│  Energy Optimizer app        │----->|    Registry  │----->│  Your Driver   │
-│  (a separate repo — pip-     │      │ (registry.py)│      │  (grid/xx.py)  │
-│   installs this package)     │      │              │      │                │
+│  Energy Optimizer app       │----->|    Registry  │----->│  Your Driver   │
+│  (a separate repo — pip-    │      │ (registry.py)│      │  (grid/xx.py)  │
+│   installs this package)    │      │              │      │                │
 └─────────────────────────────┘      └──────────────┘      └────────────────┘
          │                                                     │
          │  calls get_data() on a schedule                     │  talks to device
@@ -87,7 +87,7 @@ energy-optimizer-device-drivers/
 
 ## Supported Device Types
 
-| Type        | Enum                     | ABC                | Return Type      | Purpose                            |
+| Type        | Enum                     | ABC                | Return Type       | Purpose                             |
 | ----------- | ------------------------ | ------------------ | ----------------- | ----------------------------------- |
 | Grid Meter  | `DeviceType.GRID_METER`  | `GridMeterDriver`  | `GridMeterData`   | Read power import/export            |
 | PV Inverter | `DeviceType.PV_INVERTER` | `PVInverterDriver` | `PVInverterData`  | Read solar production               |
@@ -104,9 +104,9 @@ real, buildable types yet.
 
 Every driver must:
 
-| Method / Attribute | Description                                            |
-| ------------------- | ------------------------------------------------------ |
-| `driver_id`         | Unique string identifier (snake_case)                  |
+| Method / Attribute   | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `driver_id`          | Unique string identifier (snake_case)                  |
 | `name`               | Real product name shown in UI                          |
 | `manufacturer`       | Real brand name                                        |
 | `builder`            | Who built the driver (optional, defaults to "Unknown") |
@@ -190,8 +190,8 @@ correctly).
 
 ## Quick Links
 
-| Document                                                       | What it covers                             |
-| ---------------------------------------------------------------- | ------------------------------------------- |
+| Document                                                        | What it covers                             |
+| --------------------------------------------------------------- | ------------------------------------------ |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                              | Step-by-step guide to writing a new driver, and how a PR actually gets reviewed |
 | [SECURITY.md](SECURITY.md)                                      | Security rules and forbidden patterns      |
 | [docs/contracts/grid_meter.md](docs/contracts/grid_meter.md)    | Grid meter data contract                   |
@@ -200,4 +200,4 @@ correctly).
 | [docs/contracts/ac_unit.md](docs/contracts/ac_unit.md)          | AC unit data contract                      |
 | [energy_optimizer_drivers/cert_store.py](energy_optimizer_drivers/cert_store.py) | TOFU TLS certificate pinning for HTTPS drivers with self-signed certs |
 | [energy_optimizer_drivers/base.py](energy_optimizer_drivers/base.py) | Source of truth — ABCs and TypedDicts      |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                               | Why this is a separate repo, and exactly what is/isn't shared with the main app |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                              | Why this is a separate repo, and exactly what is/isn't shared with the main app |
