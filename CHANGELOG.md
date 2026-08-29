@@ -2,6 +2,18 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.4 — 2026-08-29
+
+### Fixed
+- `SECURITY.md`'s "Enforcement" section overstated what's actually automated. The
+  `driver-reviewer.agent.md` checklist is **not** wired into CI or any GitHub Actions workflow —
+  it only applies when a human or AI assistant is deliberately asked to use it, despite previously
+  being described as "the automated driver reviewer agent." Corrected to clearly separate what
+  `.github/workflows/ci.yml` actually runs on every push/PR (ruff + the two pytest compliance
+  suites) from what requires someone to actively invoke it. Also explicitly annotated the new §1.4
+  rule (no real device data) as policy-only — it's not just currently uncovered by automation, it
+  fundamentally cannot be: no static check can distinguish a fabricated hex string from a real one.
+
 ## 0.1.3 — 2026-08-29
 
 ### Added

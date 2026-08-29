@@ -1,6 +1,6 @@
 # Driver Security Contract
 
-This document defines the security rules and data safety requirements that **every driver** (builtin or third-party) must adhere to. Violations will be flagged by the automated driver reviewer agent and will block integration.
+This document defines the security rules and data safety requirements that **every driver** (builtin or third-party) must adhere to. Some violations are caught automatically by CI on every PR; others require a human or AI-assisted reviewer to actually check — see "Enforcement" at the bottom for exactly which is which. Either way, a violation blocks integration.
 
 > **Zero tolerance: no real device data in this repo, ever.** A real serial number, MAC address,
 > device name, hardware ID, or any other value that identifies a specific physical unit must never
@@ -63,6 +63,11 @@ Drivers **MUST NOT**:
 - Create local files, databases, or caches outside of the data returned through `get_data()`.
 
 ### 1.4 No Real Device Data Anywhere in This Repo
+
+**(policy only — no automated check, and this one fundamentally can't have one: nothing about a
+fabricated hex string and a real captured one is syntactically different, so no static scan can
+tell them apart. Enforcement is entirely PR review — the driver-reviewer agent and a human — see
+"Enforcement" below.)**
 
 This is distinct from credential safety (§1.2, about secrets a driver handles at *runtime*) — this
 rule is about what gets *committed*, and it applies to test fixtures, docstrings, comments, example
@@ -219,14 +224,20 @@ Drivers **MUST NOT**:
 
 ## Enforcement
 
-1. **Automated**: The `@driver-reviewer` agent scans all driver code for violations.
-2. **Static**: The `tests/test_security_compliance.py` suite enforces the automated subset
-   of the rules above (see the "(automated — ...)" annotations throughout this document for exactly
-   which); `tests/test_contract_compliance.py` is a separate suite that validates
-   *structural* requirements (identity attributes, method signatures, ABC hierarchy) — it contains
-   no security checks itself.
-3. **Review**: All driver contributions require review against this security contract, including
-   the rules marked "policy only" above that the test suite can't catch.
+1. **Actually automated, runs on every push/PR via `.github/workflows/ci.yml`**: `ruff check .` and
+   `pytest tests/`, which includes `tests/test_security_compliance.py` (enforces the rules
+   annotated "(automated — ...)" throughout this document) and `tests/test_contract_compliance.py`
+   (a separate suite validating *structural* requirements — identity attributes, method signatures,
+   ABC hierarchy — it contains no security checks itself). This is the only enforcement that runs
+   without anyone deliberately invoking it.
+2. **Not automated, despite the name**: `.github/agents/driver-reviewer.agent.md` is a checklist
+   for a human or AI assistant to apply *when asked* to review a PR — it is not wired into any
+   GitHub Actions workflow and does not run by itself. Don't assume a PR has been checked against it
+   just because it exists in this repo; someone has to actually invoke it.
+3. **Review**: All driver contributions require a human (or a human-directed AI assistant using the
+   agent checklist above) to review against this full contract, including every rule marked "policy
+   only" that the test suite structurally cannot catch — most importantly §1.4, which by its nature
+   never will be automatable.
 4. **Runtime**: The application sandboxes driver calls with timeouts and exception guards.
 
 ---
