@@ -224,8 +224,10 @@ Drivers **MUST NOT**:
 
 ## Enforcement
 
-1. **Actually automated, runs on every push/PR via `.github/workflows/ci.yml`**: `ruff check .` and
-   `pytest tests/`, which includes `tests/test_security_compliance.py` (enforces the rules
+1. **Actually automated, runs on every push/PR via `.github/workflows/ci.yml`**: `ruff check .`,
+   `basedpyright` (type checking — catches a real class of bugs, not a security scanner on its own,
+   but a driver that doesn't type-check cleanly is rejected same as one that fails lint or tests),
+   and `pytest tests/`, which includes `tests/test_security_compliance.py` (enforces the rules
    annotated "(automated — ...)" throughout this document) and `tests/test_contract_compliance.py`
    (a separate suite validating *structural* requirements — identity attributes, method signatures,
    ABC hierarchy — it contains no security checks itself). This is the only enforcement that runs

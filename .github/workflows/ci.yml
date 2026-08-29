@@ -20,14 +20,18 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+          cache-dependency-path: requirements-dev.txt
 
-      - name: Install package + test dependencies
+      - name: Install package + dev dependencies
         run: |
           pip install --quiet -e .
-          pip install --quiet pytest pytest-cov ruff
+          pip install --quiet -r requirements-dev.txt
 
       - name: Lint (ruff)
         run: ruff check .
+
+      - name: Type check (basedpyright)
+        run: basedpyright
 
       - name: Contract + security compliance tests
         run: pytest tests/ -v --cov=energy_optimizer_drivers --cov-report=term-missing

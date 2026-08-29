@@ -10,6 +10,15 @@ This guide explains how to create a new driver for the Energy Optimizer app.
 - Access to the device's API documentation or protocol specification
 - Python 3.13+
 
+Install this repo's own package in editable mode plus the exact dev toolchain CI runs against —
+same `ruff`/`basedpyright`/`pytest` versions, same `pyrightconfig.json` (already in the repo, so it
+applies automatically once `basedpyright` is installed) — so what passes locally passes in CI:
+
+```bash
+pip install -e .
+pip install -r requirements-dev.txt
+```
+
 ---
 
 ## Step 1: Choose the Device Type
@@ -323,7 +332,7 @@ def test_get_data_failure():
 - [ ] No real serial numbers, MAC addresses, device/room names, or deployment IPs anywhere in the
       diff — test fixtures use fabricated data shaped to match the protocol, not a real capture
 - [ ] Tests pass with mocked I/O
-- [ ] `basedpyright energy_optimizer_drivers/` reports 0 errors
+- [ ] `basedpyright` reports 0 errors (CI enforces this — see Prerequisites for the install command)
 
 ---
 

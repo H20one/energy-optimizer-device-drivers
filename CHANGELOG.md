@@ -2,6 +2,21 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.12 — 2026-08-29
+
+### Added
+- `basedpyright` now actually runs in CI (`.github/workflows/ci.yml`) — previously it was only a
+  checklist item in `CONTRIBUTING.md` ("reports 0 errors"), unenforced and easy to skip.
+- `requirements-dev.txt` — this repo had no shared, versioned dev-tooling file at all; CI installed
+  `pytest`/`pytest-cov`/`ruff` as loose unpinned lines directly in the workflow YAML, with nothing a
+  contributor could install from to reliably match CI locally. Now `pip install -r
+  requirements-dev.txt` gets the exact same `ruff`/`basedpyright`/`pytest` versions CI uses, and
+  `pyrightconfig.json` (already committed) applies automatically once `basedpyright` is installed —
+  same config, not just the same tool name.
+- `CONTRIBUTING.md`'s Prerequisites section now gives the install command explicitly; the
+  `basedpyright` checklist item now says CI enforces it instead of implying it's honor-system.
+- `SECURITY.md`'s "Enforcement" section now lists `basedpyright` among what CI actually runs.
+
 ## 0.1.11 — 2026-08-29
 
 ### Changed
