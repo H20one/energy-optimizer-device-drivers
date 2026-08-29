@@ -2,6 +2,16 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.6 — 2026-08-29
+
+### Changed
+- `CLAUDE.md` has been purged entirely from git history, not just untracked going forward (as of
+  0.1.5). It contained no secrets or private data — this was done purely so the repo's history
+  doesn't carry a file that's no longer part of the public repo, not a security response. **Every
+  commit and tag in this repo was rewritten as a result** — if you cloned this repo before this
+  release, discard that clone and re-clone; the old history is no longer compatible with what's on
+  the remote.
+
 ## 0.1.5 — 2026-08-29
 
 ### Changed
@@ -44,9 +54,8 @@ All notable changes to the device drivers package are documented here.
 ### Security
 - **Removed real device data (a device serial number, a device MAC address, and a real room name)
   that had been accidentally committed in a test fixture, mislabeled as "real payloads captured
-  live" — replaced with clearly fabricated example data.** If you cloned this repo at `v0.1.0` or
-  `v0.1.1`, that data is present in your local copy's history; please discard those clones. See the
-  project's own advisory/release notes for this version for further detail.
+  live" — replaced with clearly fabricated example data.** If you cloned this repo before this
+  release, that data is present in your local copy's history; please discard that clone.
 
 ### Changed
 - Full documentation pass for public readability: removed several references to internal-only
