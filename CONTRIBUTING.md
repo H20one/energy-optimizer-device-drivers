@@ -1,0 +1,338 @@
+# Contributing a Driver
+
+This guide explains how to create a new driver for the Energy Optimizer app.
+
+---
+
+## Prerequisites
+
+- A real, commercially available device (brand + model)
+- Access to the device's API documentation or protocol specification
+- Python 3.13+
+
+---
+
+## Step 1: Choose the Device Type
+
+Drivers must target one of the fixed device types defined in `DeviceType`:
+
+| Enum Value               | Folder          | ABC to subclass    |
+| ------------------------ | --------------- | ------------------ |
+| `DeviceType.GRID_METER`  | `energy_optimizer_drivers/grid/` | `GridMeterDriver`  |
+| `DeviceType.PV_INVERTER` | `energy_optimizer_drivers/pv/`   | `PVInverterDriver` |
+| `DeviceType.EV_CHARGER`  | `energy_optimizer_drivers/ev/`   | `EVChargerDriver`  |
+| `DeviceType.AC_UNIT`     | `energy_optimizer_drivers/ac/`   | `ACUnitDriver`     |
+
+You cannot invent new device types without modifying `base.py` — this is intentional.
+
+---
+
+## Step 2: Read the Data Contract
+
+Before writing any code, read the contract doc for your device type:
+
+- [Grid Meter Contract](docs/contracts/grid_meter.md)
+- [PV Inverter Contract](docs/contracts/pv_inverter.md)
+- [EV Charger Contract](docs/contracts/ev_charger.md)
+- [AC Unit Contract](docs/contracts/ac_unit.md)
+
+These define:
+
+- Which fields are **required** (must never be `None`)
+- Which fields are **optional** (`None` = device doesn't support it)
+- Valid values for enum-like fields (e.g. charger `state`)
+- How the app uses each field
+
+---
+
+## Step 3: Create the Driver File
+
+Create a new file in the appropriate folder:
+
+```
+energy_optimizer_drivers/{type}/my_device.py
+```
+
+Use a filename based on `{manufacturer}_{model}` in snake_case.
+
+---
+
+## Step 4: Implement the Driver Class
+
+```python
+"""Manufacturer Model — Device Type Driver.
+
+Brief description of the device and how it communicates.
+"""
+
+import logging
+from typing import Any
+
+from energy_optimizer_drivers.base import (
+    ConfigField,
+    ConnectionType,
+    DeviceType,
+    GridMeterData,       # or PVInverterData, EVChargerData, ACUnitData
+    GridMeterDriver,     # or PVInverterDriver, EVChargerDriver, ACUnitDriver
+)
+from energy_optimizer_drivers.registry import register_driver
+
+logger = logging.getLogger(__name__)
+
+
+class MyDeviceDriver(GridMeterDriver):
+    """Grid meter driver for Manufacturer Model."""
+
+    # ── Identity (required) ───────────────────────────────────────────────
+    driver_id = "manufacturer_model"           # Unique, snake_case
+    name = "Manufacturer Model X"              # Exact product name
+    manufacturer = "Manufacturer"              # Brand name
+    builder = "YourName"                       # Who built this driver (optional)
+    device_type = DeviceType.GRID_METER        # Must match the ABC
+    connection_type = ConnectionType.WIFI      # How it talks to the device
+
+    # ── Init ──────────────────────────────────────────────────────────────
+
+    def __init__(self, config: dict[str, Any]) -> None:
+        """Instantiate with user-provided config from the Add Device wizard."""
+        self._ip: str = config["ip"]
+        self._last_error: str | None = None
+        self._last_success: float | None = None
+
+    # ── Config Schema ─────────────────────────────────────────────────────
+
+    @classmethod
+    def config_schema(cls) -> list[ConfigField]:
+        """Define what the user needs to fill in to connect this device."""
+        return [
+            {"key": "ip", "label": "IP Address", "type": "text", "required": True},
+        ]
+
+    # ── Status ────────────────────────────────────────────────────────────
+
+    def get_status(self) -> str:
+        if self._last_error:
+            return "error"
+        if self._last_success is None:
+            return "disabled"
+        return "connected"
+
+    @property
+    def last_error(self) -> str | None:
+        return self._last_error
+
+    # ── Data ──────────────────────────────────────────────────────────────
+
+    def get_data(self) -> GridMeterData | None:
+        """Fetch data and map to the contract. Return None on failure."""
+        try:
+            # ... communicate with device ...
+            # ... map response to contract ...
+            return GridMeterData(
+                # Required — must always have real values
+                grid_power_w=...,
+                import_total_kwh=...,
+                export_total_kwh=...,
+                # Optional — None if device doesn't support
+                gas_total_m3=None,
+                voltage_l1_v=...,
+                ...
+            )
+        except Exception as e:
+            self._last_error = str(e)
+            logger.warning("MyDevice read failed: %s", e)
+            return None
+
+
+# Register at import time — this is how the registry discovers the driver
+register_driver("manufacturer_model", MyDeviceDriver)
+```
+
+**EV charger drivers** additionally implement one setter: `set_current(self, amps: float) -> bool`.
+
+**AC unit drivers** additionally implement three setters, not one — `set_mode(self, mode: str)`,
+`set_temperature(self, temp_c: float)`, `set_fan_speed(self, speed: str)`, all returning `bool`.
+See `energy_optimizer_drivers/ac/daikin_brp.py` for a real worked example (the only builtin driver with a
+multi-setter interface today) and `docs/contracts/ac_unit.md` for the `mode` enum and a note on
+why `fan_speed` deliberately does NOT have a fixed cross-brand vocabulary.
+
+---
+
+## Step 5: Register in the Registry (builtin drivers only)
+
+Add your module to the `builtin_modules` list in `energy_optimizer_drivers/registry.py`:
+
+```python
+builtin_modules = [
+    "energy_optimizer_drivers.grid.homewizard_p1",
+    "energy_optimizer_drivers.pv.aurora_rs485",
+    "energy_optimizer_drivers.ev.alfen_eve",
+    "energy_optimizer_drivers.ac.daikin_brp",
+    "energy_optimizer_drivers.grid.my_device",       # ← add here
+]
+```
+
+---
+
+## Step 6: For External (pip-installed) Drivers
+
+If your driver lives in a separate package, skip Step 5 and instead declare an entry point:
+
+```toml
+# pyproject.toml of your external driver package
+[project]
+name = "energy-optimizer-driver-mydevice"
+dependencies = ["energy-optimizer-device-drivers"]    # needs access to energy_optimizer_drivers.base
+
+[project.entry-points."energy_optimizer.drivers"]
+manufacturer_model = "my_package.driver:MyDeviceDriver"
+```
+
+The app discovers it automatically at startup via `importlib.metadata.entry_points()`.
+
+---
+
+## Rules
+
+### Identity
+
+- `driver_id` must be unique across all drivers (builtin + external)
+- `name` must be the real product name (e.g. "Shelly Pro 3EM", not "My Energy Meter")
+- `manufacturer` must be the real brand name
+- `builder` is optional — set it to your name or organization (defaults to "Unknown" if omitted)
+- `device_type` must use the `DeviceType` enum — no raw strings
+- `connection_type` must use the `ConnectionType` enum
+
+### Data Contract
+
+- **Required fields must never be `None`** — if you can't read them, return `None` from `get_data()`
+- Optional fields: use `None` for unsupported, `0.0` for supported-but-zero
+- EV charger `state` must be one of: `"available"`, `"connected"`, `"charging"`, `"error"`
+- EV charger single-phase: set `current_l2_a = 0.0`, `current_l3_a = 0.0` (not `None`)
+
+### Error Handling
+
+- Never let exceptions escape from `get_data()` or `set_current()` — catch and return `None`/`False`
+- Store error details in `self._last_error` for status reporting
+- Use `logger.warning()` for recoverable errors, not `logger.error()`
+
+### Dependencies
+
+- Only import from `energy_optimizer_drivers.base`, `energy_optimizer_drivers.registry`, and
+  `energy_optimizer_drivers.cert_store` (for HTTPS drivers)
+- **Never** import from `energy-optimizer`'s own `src/`, `config/`, or other driver modules — even
+  though this is now a separate repo, the drivers package still ends up pip-installed into the same
+  process as the main app in production, so this isn't just a style rule, it's a real boundary
+- External libraries (e.g. `requests`, `pyserial`) are fine — declare them in your package deps
+- Lazy-import heavy/optional deps (e.g. `import serial` inside the method that needs it)
+- For HTTPS devices with self-signed certificates, use `energy_optimizer_drivers.cert_store.resolve_verify()` in `__init__` — do not implement your own TLS pinning or call `ssl.get_server_certificate()` directly
+
+### Config Schema
+
+- Mark secrets (passwords, API keys) as `type: "password"` — the app encrypts these at rest
+- Provide sensible `default` values where possible
+- Use `placeholder` for format hints (e.g. "192.168.1.x")
+
+### Serial / RS-485 Port Paths
+
+For serial drivers, **do not expose the port path in `config_schema()`**. The serial port is mapped
+to a fixed path (`/dev/ttyUSB1`) inside the container via `docker-compose.override.yml` and a udev
+symlink — that mapping lives in the `energy-optimizer` app repo (this package is installed into that
+container, not run standalone), and users never need to change it. Hardcode the port as a class
+constant and use it directly in `get_data()`.
+
+### Discovery (optional)
+
+- Override `discover()` if the device supports network scanning (mDNS, HTTP, etc.)
+- Return a list of pre-filled config dicts that the user can pick from
+- Serial/RS-485 devices typically can't be discovered — leave the default `[]`
+
+### Setup Guide (optional)
+
+Override `setup_guide()` to return a Markdown string that helps users connect the device. The guide is rendered in the Add Device wizard using **[marked.js](https://marked.js.org/)** with GitHub Flavored Markdown (GFM) support.
+
+**Supported formatting:**
+
+- Headings (`##`, `###`)
+- Bold, italic, inline code
+- Bullet lists and numbered lists
+- GFM tables (`| Col | Col |`)
+- Code blocks (fenced with triple backticks)
+- Links
+
+**Best practices:**
+
+- Start with a `## Title` heading
+- Use `### Numbered Steps` for the installation flow
+- Keep it concise — users see this in a scrollable popup, not a full page
+- Use tables for pin mappings or parameter lists
+- Don't use images (not supported in the popup context)
+
+---
+
+## Testing
+
+Write tests for your driver in `tests/test_{driver_id}.py`. Mock all network/serial I/O:
+
+```python
+from unittest.mock import patch
+from energy_optimizer_drivers.grid.my_device import MyDeviceDriver
+
+def test_get_data_success():
+    driver = MyDeviceDriver({"ip": "192.168.1.100"})
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.json.return_value = {...}
+        mock_get.return_value.status_code = 200
+        data = driver.get_data()
+    assert data is not None
+    assert data["grid_power_w"] == 450.0
+    assert data["import_total_kwh"] > 0
+
+def test_get_data_failure():
+    driver = MyDeviceDriver({"ip": "192.168.1.100"})
+    with patch("requests.get", side_effect=ConnectionError):
+        data = driver.get_data()
+    assert data is None
+    assert driver.last_error is not None
+```
+
+---
+
+## Checklist Before Submitting
+
+- [ ] `driver_id` is unique and snake_case
+- [ ] `name` / `manufacturer` are real product/brand names
+- [ ] `device_type` and `connection_type` use the enums
+- [ ] `get_data()` returns the correct TypedDict with all required fields
+- [ ] `get_data()` returns `None` on any failure (never raises)
+- [ ] `config_schema()` marks passwords as `type: "password"`
+- [ ] No imports from `src/` or `config/`
+- [ ] Tests pass with mocked I/O
+- [ ] `basedpyright energy_optimizer_drivers/` reports 0 errors
+
+---
+
+## Submitting Your Driver
+
+1. **Fork this repo**, add your driver on a branch (`energy_optimizer_drivers/{type}/my_device.py`
+   for a builtin-style addition — see Step 5 — or your own separate package for an external one, see
+   Step 6), and open a pull request against `main`.
+2. **CI runs automatically** on every PR: `tests/test_contract_compliance.py` (structural checks —
+   identity attributes, method signatures, ABC hierarchy) and `tests/test_security_compliance.py`
+   (static analysis against [SECURITY.md](SECURITY.md)'s rules — forbidden imports/calls, credential
+   logging, missing timeouts, outbound-internet calls, etc.). Both must pass before review.
+3. **An AI reviewer agent** (`.github/agents/driver-reviewer.agent.md`) does a deeper pass beyond
+   what the automated tests check for — data contract correctness against the relevant
+   `docs/contracts/{device_type}.md`, `discover()`/`get_data()` never raising, sensible error
+   handling, and anything the static checks can't catch (see [SECURITY.md](SECURITY.md)'s own note on
+   what its automated enforcement does and doesn't cover). Expect comments directly on the PR.
+4. **A maintainer does the final review** — CI passing and the automated agent review are necessary,
+   not sufficient; a human still confirms the driver is safe and correct before merging, especially
+   for anything the static checks structurally can't verify (e.g. whether the device's actual
+   protocol was implemented correctly, which requires either real hardware or a careful read of the
+   vendor's API docs).
+5. Once merged, a builtin-style driver ships in the next tagged release of this package (see
+   [CHANGELOG.md](CHANGELOG.md)) — `energy-optimizer` picks it up when it bumps its pinned dependency
+   version. An external (pip-installed, entry-point-based) driver is independent of this repo's
+   release cycle entirely — it's discovered at runtime via `importlib.metadata.entry_points()`, so it
+   ships whenever *you* publish your own package.
