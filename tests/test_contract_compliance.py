@@ -24,6 +24,7 @@ from energy_optimizer_drivers.base import (
     PVInverterData,
     PVInverterDriver,
 )
+from energy_optimizer_drivers.contract_validation import validate_contract_data
 from energy_optimizer_drivers.registry import DRIVER_REGISTRY, _load_builtin_drivers
 
 # Ensure all builtin drivers are loaded before tests run
@@ -342,3 +343,87 @@ class TestInitContract:
             f"{driver_cls.driver_id}.__init__ second param must be 'config', "
             f"got '{params[1].name}'"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONTRACT VALIDATION UTILITY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestValidateContractData:
+    """`validate_contract_data()` itself: the runtime check every driver's
+    get_data() test should run its mocked result through (see
+    test_daikin_brp.py, test_alfen_driver.py, test_aurora_driver.py)."""
+
+    _VALID_GRID_METER_DATA: GridMeterData = {
+        "grid_power_w": -450.0,
+        "import_total_kwh": 8234.5,
+        "export_total_kwh": 2100.3,
+        "import_t1_kwh": None,
+        "import_t2_kwh": None,
+        "export_t1_kwh": None,
+        "export_t2_kwh": None,
+        "gas_total_m3": None,
+        "voltage_l1_v": 231.2,
+        "voltage_l2_v": None,
+        "voltage_l3_v": None,
+        "current_l1_a": 3.2,
+        "current_l2_a": None,
+        "current_l3_a": None,
+        "frequency_hz": 50.01,
+    }
+
+    def test_fully_compliant_data_has_no_violations(self) -> None:
+        assert validate_contract_data(DeviceType.GRID_METER, self._VALID_GRID_METER_DATA) == []
+
+    def test_missing_required_key_is_a_violation(self) -> None:
+        data = dict(self._VALID_GRID_METER_DATA)
+        del data["grid_power_w"]
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("missing required key 'grid_power_w'" in v for v in violations)
+
+    def test_required_key_set_to_none_is_a_violation(self) -> None:
+        data = {**self._VALID_GRID_METER_DATA, "import_total_kwh": None}
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("'import_total_kwh' must not be None" in v for v in violations)
+
+    def test_wrong_type_on_required_key_is_a_violation(self) -> None:
+        data = {**self._VALID_GRID_METER_DATA, "grid_power_w": "450"}
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("'grid_power_w' expected" in v for v in violations)
+
+    def test_wrong_type_on_present_optional_key_is_a_violation(self) -> None:
+        data = {**self._VALID_GRID_METER_DATA, "voltage_l1_v": "231.2"}
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("'voltage_l1_v' expected" in v for v in violations)
+
+    def test_optional_key_left_as_none_is_fine(self) -> None:
+        assert self._VALID_GRID_METER_DATA["gas_total_m3"] is None
+        assert validate_contract_data(DeviceType.GRID_METER, self._VALID_GRID_METER_DATA) == []
+
+    def test_unexpected_key_is_a_violation(self) -> None:
+        data = {**self._VALID_GRID_METER_DATA, "totally_made_up_field": 1}
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("unexpected key" in v and "totally_made_up_field" in v for v in violations)
+
+    def test_int_accepted_where_float_expected(self) -> None:
+        """A driver returning a plain int for a float field (e.g. `0` instead
+        of `0.0`) is fine — Python doesn't distinguish them for arithmetic
+        purposes, and neither should this check."""
+        data = {**self._VALID_GRID_METER_DATA, "grid_power_w": 0}
+        assert validate_contract_data(DeviceType.GRID_METER, data) == []
+
+    def test_bool_rejected_where_float_expected(self) -> None:
+        """`bool` is an `int` subclass in Python — must not slip through a
+        float/int check just because `isinstance(True, int)` is True."""
+        data = {**self._VALID_GRID_METER_DATA, "grid_power_w": True}
+        violations = validate_contract_data(DeviceType.GRID_METER, data)
+        assert any("'grid_power_w' expected" in v for v in violations)
+
+    def test_covers_all_four_device_types(self) -> None:
+        """Every DeviceType must have a validator entry — new device types
+        (a coordinated, maintainer-agreed change per ARCHITECTURE.md) must
+        extend contract_validation._CONTRACT_BY_DEVICE_TYPE too."""
+        from energy_optimizer_drivers.contract_validation import _CONTRACT_BY_DEVICE_TYPE
+
+        assert set(_CONTRACT_BY_DEVICE_TYPE) == set(DeviceType)

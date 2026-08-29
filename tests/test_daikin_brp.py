@@ -11,6 +11,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from energy_optimizer_drivers.base import DeviceType
+from energy_optimizer_drivers.contract_validation import validate_contract_data
+
 # ─── Test IP constants (RFC 5737 TEST-NET-1 — reserved for documentation/testing) ─
 _TEST_IP = "192.0.2.1"  # primary adapter under test
 _TEST_LOCAL_IP = "192.0.2.100"  # simulated local-machine IP returned by getsockname
@@ -70,6 +73,7 @@ class TestDaikinBrpDriver:
         assert data["fan_speed"] == "auto"
         assert data["humidity_pct"] == pytest.approx(55.0)
         assert data["power_w"] == pytest.approx(0.0)
+        assert validate_contract_data(DeviceType.AC_UNIT, data) == []
 
     def test_get_data_off_unit(self, driver):
         with patch("requests.get") as mock_get:

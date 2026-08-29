@@ -31,6 +31,11 @@ Returns `None` when the device is unreachable. Otherwise returns a dict with:
 | `voltage_l2_v`       | `float \| None` | V    | Phase 2 voltage                     |
 | `voltage_l3_v`       | `float \| None` | V    | Phase 3 voltage                     |
 
+**Enforcement:** the required/optional split above is marked in `base.py`'s `EVChargerData` via
+`Required[...]` and checkable at runtime with
+`energy_optimizer_drivers.contract_validation.validate_contract_data()` — see that module for what
+it does and doesn't check.
+
 ---
 
 ## State Values

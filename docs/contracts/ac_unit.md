@@ -26,6 +26,11 @@ Returns `None` when the device is unreachable. Otherwise returns a dict with:
 | `fan_speed`    | `str \| None`   | —    | Driver-specific — see "Fan Speed Values" below  |
 | `humidity_pct` | `float \| None` | %    | Measured indoor relative humidity               |
 
+**Enforcement:** the required/optional split above is marked in `base.py`'s `ACUnitData` via
+`Required[...]` and checkable at runtime with
+`energy_optimizer_drivers.contract_validation.validate_contract_data()` — see that module for what
+it does and doesn't check.
+
 ---
 
 ## Mode Values

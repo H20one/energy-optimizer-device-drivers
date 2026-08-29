@@ -28,6 +28,11 @@ Returns `None` when the device is unreachable or sleeping (e.g. at night with no
 | `grid_voltage_v`    | `float \| None` | V    | AC grid voltage as measured by inverter |
 | `grid_frequency_hz` | `float \| None` | Hz   | AC grid frequency                       |
 
+**Enforcement:** the required/optional split above is marked in `base.py`'s `PVInverterData` via
+`Required[...]` and checkable at runtime with
+`energy_optimizer_drivers.contract_validation.validate_contract_data()` — see that module for what
+it does and doesn't check.
+
 ---
 
 ## Night / Sleep Behaviour

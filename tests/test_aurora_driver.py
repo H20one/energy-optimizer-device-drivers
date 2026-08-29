@@ -16,6 +16,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from energy_optimizer_drivers.base import DeviceType
+from energy_optimizer_drivers.contract_validation import validate_contract_data
 from energy_optimizer_drivers.pv.aurora_rs485 import AuroraRS485Driver, _crc16
 
 # ---------------------------------------------------------------------------
@@ -344,6 +346,7 @@ class TestAuroraGetStatus:
 
         assert result is not None
         assert driver.get_status() == "connected"
+        assert validate_contract_data(DeviceType.PV_INVERTER, result) == []
 
     def test_going_quiet_after_a_prior_success_is_sleeping_not_error(self) -> None:
         """Regression test for the core bug: previously, _last_error was

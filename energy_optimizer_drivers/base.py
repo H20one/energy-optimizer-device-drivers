@@ -4,11 +4,14 @@ This module is the ONLY shared dependency between the app and drivers.
 All drivers import from here and implement these interfaces.
 
 See docs/contracts/ for the full data contract specification per device type.
+Required vs optional fields below are marked with `Required[...]`/plain-optional
+so the distinction is checkable at runtime, not just documented in comments —
+see `energy_optimizer_drivers.contract_validation.validate_contract_data()`.
 """
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import Any, TypedDict
+from typing import Any, Required, TypedDict
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DEVICE TYPE ENUM
@@ -124,9 +127,9 @@ class GridMeterData(TypedDict, total=False):
     """Data contract for grid meters. See docs/contracts/grid_meter.md."""
 
     # REQUIRED — must always be a real number, never None
-    grid_power_w: float  # Signed: + import, - export
-    import_total_kwh: float  # Lifetime import counter (sum of all tariffs)
-    export_total_kwh: float  # Lifetime export counter (sum of all tariffs)
+    grid_power_w: Required[float]  # Signed: + import, - export
+    import_total_kwh: Required[float]  # Lifetime import counter (sum of all tariffs)
+    export_total_kwh: Required[float]  # Lifetime export counter (sum of all tariffs)
 
     # OPTIONAL — None means device doesn't support it, 0.0 means supported but zero
     import_t1_kwh: float | None  # Peak/day tariff counter
@@ -147,9 +150,9 @@ class PVInverterData(TypedDict, total=False):
     """Data contract for PV inverters. See docs/contracts/pv_inverter.md."""
 
     # REQUIRED — must always be a real number, never None
-    solar_power_w: float  # Current AC output (0.0 at night)
-    daily_energy_wh: float  # Energy produced today (resets at midnight)
-    total_energy_wh: float  # Lifetime energy counter
+    solar_power_w: Required[float]  # Current AC output (0.0 at night)
+    daily_energy_wh: Required[float]  # Energy produced today (resets at midnight)
+    total_energy_wh: Required[float]  # Lifetime energy counter
 
     # OPTIONAL — None means device doesn't support it
     temperature_c: float | None  # Inverter temperature
@@ -163,13 +166,13 @@ class EVChargerData(TypedDict, total=False):
     """Data contract for EV chargers. See docs/contracts/ev_charger.md."""
 
     # REQUIRED — must always be a real value, never None
-    state: str  # "available" | "connected" | "charging" | "error"
-    power_w: float  # Active power draw (0.0 when idle)
-    current_l1_a: float  # Phase 1 current (0.0 if single-phase and idle)
-    current_l2_a: float  # Phase 2 current (0.0 if single-phase)
-    current_l3_a: float  # Phase 3 current (0.0 if single-phase)
-    energy_total_kwh: float  # Lifetime energy counter
-    max_current_a: float  # Configured max current for this station
+    state: Required[str]  # "available" | "connected" | "charging" | "error"
+    power_w: Required[float]  # Active power draw (0.0 when idle)
+    current_l1_a: Required[float]  # Phase 1 current (0.0 if single-phase and idle)
+    current_l2_a: Required[float]  # Phase 2 current (0.0 if single-phase)
+    current_l3_a: Required[float]  # Phase 3 current (0.0 if single-phase)
+    energy_total_kwh: Required[float]  # Lifetime energy counter
+    max_current_a: Required[float]  # Configured max current for this station
 
     # OPTIONAL — None means device doesn't support it
     session_energy_kwh: float | None  # Energy in current charging session
@@ -182,10 +185,10 @@ class ACUnitData(TypedDict, total=False):
     """Data contract for AC units. See docs/contracts/ac_unit.md."""
 
     # REQUIRED — must always be a real value, never None
-    mode: str  # "off" | "cool" | "heat" | "fan" | "dry" | "auto"
-    power_w: float  # Current power draw in W (0.0 when off)
-    temperature_c: float  # Measured room temperature
-    target_temp_c: float  # Set-point temperature
+    mode: Required[str]  # "off" | "cool" | "heat" | "fan" | "dry" | "auto"
+    power_w: Required[float]  # Current power draw in W (0.0 when off)
+    temperature_c: Required[float]  # Measured room temperature
+    target_temp_c: Required[float]  # Set-point temperature
 
     # OPTIONAL — None means device doesn't support it
     fan_speed: str | None  # "auto" | "low" | "medium" | "high"

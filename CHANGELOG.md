@@ -2,6 +2,28 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.7 — 2026-08-29
+
+### Added
+- New `energy_optimizer_drivers.contract_validation.validate_contract_data()` — checks a driver's
+  returned dict against its `docs/contracts/{device_type}.md` data contract **at runtime**: every
+  required field present and non-None, no unexpected keys, and correct types throughout. Until now,
+  the required/optional split in `base.py`'s `GridMeterData`/`PVInverterData`/`EVChargerData`/
+  `ACUnitData` TypedDicts was comment-only — Python erases `TypedDict` at runtime, so nothing
+  actually checked a driver's real output against it, and this repo doesn't run a static type
+  checker in CI either. This only covers the generic, mechanically-checkable part of each contract
+  (structure and type) — semantic rules like "single-phase meters must report L2/L3 as `None`, not
+  `0.0`" still need device-specific judgment and stay policy-only, same as `SECURITY.md` §1.4.
+- `base.py`'s data TypedDicts now mark each required field with `Required[...]` instead of a
+  comment, so the distinction is introspectable at runtime (`__required_keys__`) — what
+  `validate_contract_data()` reads. Not a breaking change: the field set and types are unchanged.
+- Wired the new check into the existing mocked `get_data()` tests for the three drivers that have
+  behavior test suites (`test_daikin_brp.py`, `test_alfen_driver.py`, `test_aurora_driver.py`).
+  `homewizard_p1` has no dedicated behavior test file yet — a pre-existing gap, not introduced or
+  closed by this change — so it isn't covered by this check either, for now.
+- `docs/contracts/*.md` each cross-reference `validate_contract_data()` under their required/optional
+  field tables, so the doc and the code enforcing it point at each other.
+
 ## 0.1.6 — 2026-08-29
 
 ### Changed

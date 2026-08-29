@@ -14,7 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from energy_optimizer_drivers.base import EVChargerData
+from energy_optimizer_drivers.base import DeviceType, EVChargerData
+from energy_optimizer_drivers.contract_validation import validate_contract_data
 from energy_optimizer_drivers.ev.alfen_eve import AlfenEveDriver
 
 # ---------------------------------------------------------------------------
@@ -127,6 +128,11 @@ class TestAlfenResponseParsing:
 
     def test_returns_data_object_not_none(self) -> None:
         assert _get_data_with_mock_props(_MOCK_PROPS) is not None
+
+    def test_matches_ev_charger_contract(self) -> None:
+        data = _get_data_with_mock_props(_MOCK_PROPS)
+        assert data is not None
+        assert validate_contract_data(DeviceType.EV_CHARGER, data) == []
 
     def test_phase_currents_match_properties(self) -> None:
         data = _get_data_with_mock_props(_MOCK_PROPS)
