@@ -2,6 +2,30 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.9 — 2026-08-29
+
+### Added
+- `tests/test_public_api_stability.py` — freezes the exact things
+  `ARCHITECTURE.md`'s "Changes that need a maintainer" section warns about (ABC method signatures,
+  `DRIVER_CALL_TIMEOUT`, the `energy_optimizer.drivers` entry-point group name) so a change to any of
+  them fails this repo's own CI immediately, intentional or not, instead of only being caught by
+  someone reading the doc. Deliberately narrow — it does not and cannot catch every way a change here
+  could break the main app (that would mean running that private repo's test suite against this
+  code, which isn't set up); see the file's docstring for the exact boundary.
+
+### Changed
+- `ARCHITECTURE.md`'s "Why a separate repo" section no longer frames the design as a choice between
+  two options — it explains the implemented in-process-package approach directly. The rejected
+  network-service alternative added length without changing anything about how this repo actually
+  works.
+- Each item in "Changes that need a maintainer" now says explicitly whether it's checked by
+  `test_public_api_stability.py` or not (and why, for the two that aren't) — previously the section
+  asserted these were breaking changes without saying whether anything actually verified that.
+- Moved the RS-485 USB passthrough note into "What this repo deliberately does not do" (as a concrete
+  example under the existing "no deployment" point) and named the specific driver it explains
+  (`aurora_rs485.py`'s fixed `/dev/ttyUSB1` path) — previously it sat disconnected from any driver
+  under "How the main app consumes this package," without saying which driver it was about.
+
 ## 0.1.8 — 2026-08-29
 
 ### Added
