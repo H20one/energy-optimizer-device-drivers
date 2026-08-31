@@ -87,7 +87,7 @@ DiscoveryResult(
 # Failure: network issue
 DiscoveryResult(
     devices=[],
-    warnings=["Could not determine the local network address. Make sure the Energy Optimizer is connected to your home network."],
+    warnings=["Could not determine the local network address. Make sure your Ionemo base is connected to your home network."],
 )
 ```
 

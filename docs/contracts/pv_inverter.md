@@ -96,7 +96,7 @@ DiscoveryResult(
 # Failure: no adapter
 DiscoveryResult(
     devices=[],
-    warnings=["No USB-to-RS485 adapter detected. Make sure it is plugged into the Energy Optimizer."],
+    warnings=["No USB-to-RS485 adapter detected. Make sure it is plugged into your Ionemo base."],
 )
 ```
 

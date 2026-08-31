@@ -103,7 +103,7 @@ class AuroraRS485Driver(PVInverterDriver):
             "Leave the 120\u03a9 termination resistor **OFF** unless the inverter "
             "is at the end of a long daisy-chain.\n\n"
             "\n### 2. Adapter Setup\n\n"
-            "1. Plug the USB-to-RS485 adapter into the Energy Optimizer "
+            "1. Plug the USB-to-RS485 adapter into your Ionemo base "
             "(always use the **same USB port** to keep the device path stable).\n"
             "2. If the adapter isn't recognized automatically, install the driver "
             "for your chipset (FTDI or CH340).\n"
@@ -116,7 +116,7 @@ class AuroraRS485Driver(PVInverterDriver):
             "- **Stop bits:** 1\n"
             "- **Address:** 1\u201332 (each inverter on the bus needs a unique address)\n\n"
             "\n### 4. Automatic Detection\n\n"
-            "Once wired, the Energy Optimizer automatically scans the RS-485 bus "
+            "Once wired, Ionemo automatically scans the RS-485 bus "
             "(addresses 1\u201310) and detects your inverter. No manual configuration "
             "is needed in most cases \u2014 just confirm the discovered device.\n"
         )
@@ -171,7 +171,7 @@ class AuroraRS485Driver(PVInverterDriver):
         except FileNotFoundError:
             return DiscoveryResult(
                 warnings=[
-                    "No USB-to-RS485 adapter detected. Make sure it is plugged into the Energy Optimizer."
+                    "No USB-to-RS485 adapter detected. Make sure it is plugged into your Ionemo base."
                 ]
             )
         except Exception as e:

@@ -2,6 +2,18 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.13 — 2026-09-01
+
+### Changed
+- Rebranded from "Energy Optimizer" to **Ionemo** everywhere it appeared: `README.md`,
+  `CONTRIBUTING.md`, `ARCHITECTURE.md`, `pyproject.toml`'s description, the package's own
+  `__init__.py` docstring, and every built-in driver's setup guide / discovery-warning text
+  (`homewizard_p1.py`, `aurora_rs485.py`, `alfen_eve.py`, `daikin_brp.py`) and matching
+  `docs/contracts/*.md` / `docs/drivers/*.md` examples — these strings are user-facing (shown in
+  the Add Device wizard), not just internal docs. Warnings about the physical device/hardware now
+  say "Ionemo base" and warnings about the software say "Ionemo", per the naming convention decided
+  alongside the rebrand (see `energy-optimizer`'s `docs/IMPROVEMENT_ROADMAP.md` N33).
+
 ## 0.1.12 — 2026-08-29
 
 ### Added

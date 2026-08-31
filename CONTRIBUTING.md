@@ -1,6 +1,6 @@
 # Contributing a Driver
 
-This guide explains how to create a new driver for the Energy Optimizer app.
+This guide explains how to create a new driver for the Ionemo app.
 
 ---
 

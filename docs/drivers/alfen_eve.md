@@ -129,7 +129,7 @@ The Alfen EVE does not respond to network broadcast discovery. The IP address mu
 - The charger uses a self-signed TLS certificate. Verification is **not** disabled — it's pinned
   via trust-on-first-use fingerprinting (see "TLS — automatic certificate pinning" above). If you
   need CA-style verification instead, provide an explicit `ca_cert_path`.
-- The Energy Optimizer only reads data and sends current-control commands — it does not modify charger configuration.
+- Ionemo only reads data and sends current-control commands — it does not modify charger configuration.
 - Change the default admin password via the charger's web interface (`https://<ip>`).
 - Place the charger on an isolated network segment if your security policy requires it.
 
@@ -152,14 +152,14 @@ The Alfen EVE does not respond to network broadcast discovery. The IP address mu
      -d '{"username":"admin","password":"<password>"}'
    ```
 2. Passwords are case-sensitive.
-3. If you changed the password via the web interface, update the device configuration in the Energy Optimizer.
+3. If you changed the password via the web interface, update the device configuration in Ionemo.
 
 ### Concurrent session error
 
 The charger allows only one active session per user level. This driver keeps a **persistent
 session** and reuses it across polls rather than logging out after each cycle (see "How the Driver
 Communicates" above), so it won't collide with itself — but a session left open by another tool
-(the charger's own web UI, a second Energy Optimizer instance, etc.) can still trigger this. If a
+(the charger's own web UI, a second Ionemo instance, etc.) can still trigger this. If a
 previous session was interrupted, try waiting 60 seconds for it to expire.
 
 ### Power reads as zero while charging

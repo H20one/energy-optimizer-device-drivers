@@ -1,7 +1,7 @@
-# Energy Optimizer — Device Drivers
+# Ionemo — Device Drivers
 
 Drivers are self-contained adapters that connect physical energy devices (meters, inverters,
-chargers, AC units) to the Energy Optimizer app. Each driver translates a device-specific protocol
+chargers, AC units) to the Ionemo app. Each driver translates a device-specific protocol
 into a fixed data contract the app understands.
 
 This package is installed as a dependency by the main app and runs **in-process** inside it — not as
@@ -61,7 +61,7 @@ energy-optimizer-device-drivers/
 
 ```
 ┌─────────────────────────────┐      ┌──────────────┐      ┌────────────────┐
-│  Energy Optimizer app       │----->|    Registry  │----->│  Your Driver   │
+│  Ionemo app                 │----->|    Registry  │----->│  Your Driver   │
 │  (a separate repo — pip-    │      │ (registry.py)│      │  (grid/xx.py)  │
 │   installs this package)    │      │              │      │                │
 └─────────────────────────────┘      └──────────────┘      └────────────────┘

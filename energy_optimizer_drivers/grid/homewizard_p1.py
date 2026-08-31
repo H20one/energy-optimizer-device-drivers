@@ -71,15 +71,15 @@ class HomewizardP1Driver(GridMeterDriver):
             "### What you need\n\n"
             "- A HomeWizard P1 dongle (HWE-P1)\n"
             "- Your smart meter\u2019s P1 port (RJ12)\n"
-            "- The dongle connected to the same WiFi network as the "
-            "Energy Optimizer\n\n"
+            "- The dongle connected to the same WiFi network as your "
+            "Ionemo base\n\n"
             "\n### 1. Install the dongle\n\n"
             "1. Plug the P1 dongle into the P1 port on your smart meter.\n"
             "2. The LED will blink while it connects to WiFi.\n"
             "3. If it\u2019s a new dongle, use the **HomeWizard Energy** app "
             "to pair it with your WiFi network first.\n\n"
             "\n### 2. Enable the Local API\n\n"
-            "The local API must be enabled for the Energy Optimizer to "
+            "The local API must be enabled for Ionemo to "
             "communicate with the dongle:\n\n"
             "1. Open the **HomeWizard Energy** app on your phone.\n"
             "2. Tap your P1 meter \u2192 Settings (\u2699).\n"
@@ -89,7 +89,7 @@ class HomewizardP1Driver(GridMeterDriver):
             "dongle\u2019s IP address (e.g. `192.168.1.42`). You can also "
             "check your router\u2019s DHCP client list.\n\n"
             "\n### 4. Automatic detection\n\n"
-            "The Energy Optimizer scans your local network for HomeWizard "
+            "Ionemo scans your local network for HomeWizard "
             "devices automatically. If your dongle is online and the API is "
             "enabled, it will appear in the discovered devices list.\n"
         )
@@ -139,7 +139,7 @@ class HomewizardP1Driver(GridMeterDriver):
             return DiscoveryResult(
                 warnings=[
                     "Could not determine the local network address. "
-                    "Make sure the Energy Optimizer is connected to your "
+                    "Make sure your Ionemo base is connected to your "
                     "home network."
                 ]
             )

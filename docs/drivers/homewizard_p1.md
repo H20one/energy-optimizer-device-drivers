@@ -109,7 +109,7 @@ with the local API disabled will not appear.
 2. Test the API directly: `curl http://<ip>/api/v1/data`
 3. Verify the **Local API** is enabled in the HomeWizard Energy app.
 4. Check the IP address is correct.
-5. Ensure no firewall blocks port 80 between the Energy Optimizer and the dongle.
+5. Ensure no firewall blocks port 80 between your Ionemo base and the dongle.
 
 ### Stale data
 

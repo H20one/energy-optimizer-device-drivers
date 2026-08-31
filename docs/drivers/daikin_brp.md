@@ -124,7 +124,7 @@ driver-specific rather than a fixed cross-brand enum.
 
 ## Discovery
 
-The driver scans the local `/24` subnet (derived from the Energy Optimizer's own outbound route,
+The driver scans the local `/24` subnet (derived from Ionemo's own outbound route,
 same technique as the other builtin drivers) using a 50-thread pool, probing
 `GET /common/basic_info` on each address with a 2.5 s timeout. A host is treated as a match when
 it responds with `ret=OK` and `type=aircon`. The scan has an overall 15-second timeout.
@@ -140,8 +140,8 @@ it responds with `ret=OK` and `type=aircon`. The scan has an overall 15-second t
 2. Test the API directly: `curl http://<ip>/common/basic_info`
 3. Verify the IP address is correct (check your router's DHCP client list for "Daikin" or
    "BRP072").
-4. Assign the adapter a static IP or a DHCP reservation — the local API has no way to notify the
-   Energy Optimizer of an IP change.
+4. Assign the adapter a static IP or a DHCP reservation — the local API has no way to notify
+   Ionemo of an IP change.
 
 ### Power always reads 0 W
 

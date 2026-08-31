@@ -92,7 +92,7 @@ class AlfenEveDriver(EVChargerDriver):
             "- The charger\u2019s IP address\n"
             "- The admin/installer password (set during commissioning)\n\n"
             "\n### 1. Network connection\n\n"
-            "The Alfen EVE must be on the same LAN as the Energy Optimizer. "
+            "The Alfen EVE must be on the same LAN as your Ionemo base. "
             "Most installations use a wired Ethernet connection between the "
             "charger and your router.\n\n"
             "\n### 2. Find the IP address\n\n"

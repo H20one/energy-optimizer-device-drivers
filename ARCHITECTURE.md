@@ -2,8 +2,8 @@
 
 ## What this is
 
-A pip-installable Python package of device driver plugins for energy-optimizer, a self-hosted
-home-energy dashboard.
+A pip-installable Python package of device driver plugins for energy-optimizer (product name:
+Ionemo — "smart energy & home control"), a self-hosted home-energy and device-control platform.
 Each driver adapts one device's protocol (HTTP, HTTPS, or RS-485 serial) into a fixed data contract
 the main app understands.
 

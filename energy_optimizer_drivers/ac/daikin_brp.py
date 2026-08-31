@@ -302,7 +302,7 @@ class DaikinBrpDriver(ACUnitDriver):
             return DiscoveryResult(
                 warnings=[
                     "Could not determine the local network address. "
-                    "Make sure the Energy Optimizer is connected to your home network."
+                    "Make sure your Ionemo base is connected to your home network."
                 ]
             )
 
@@ -340,7 +340,7 @@ class DaikinBrpDriver(ACUnitDriver):
                 warnings=[
                     "No Daikin BRP adapters found on the local network. "
                     "Make sure the adapter is powered on and connected to "
-                    "the same network as the Energy Optimizer."
+                    "the same network as your Ionemo base."
                 ]
             )
         return DiscoveryResult(devices=found)
