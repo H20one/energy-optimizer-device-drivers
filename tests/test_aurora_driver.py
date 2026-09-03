@@ -383,3 +383,206 @@ class TestAuroraGetStatus:
 
         assert result is not None
         assert driver.get_status() == "connected"
+
+
+# ---------------------------------------------------------------------------
+# get_data(): the lock-timeout guard and the outer exception handler
+# ---------------------------------------------------------------------------
+
+
+class TestGetDataFailureModes:
+    def test_lock_timeout_closes_the_port_and_returns_none(self) -> None:
+        """A previous call stuck holding the lock -> reset the port and bail
+        rather than chain-blocking behind it. Mocks acquire() itself rather
+        than really contending for the lock -- get_data()'s real 10s timeout
+        would otherwise make this test actually take 10 real seconds."""
+        driver = _make_driver()
+        driver._serial = _make_serial_mock(b"")
+        # A real threading.Lock's acquire() is a read-only C attribute and
+        # can't be patched in place -- swap the whole lock for a mock instead.
+        mock_lock = MagicMock()
+        mock_lock.acquire.return_value = False
+        driver._lock = mock_lock
+        result = driver.get_data()
+
+        mock_lock.acquire.assert_called_once_with(timeout=10.0)
+        assert result is None
+        assert driver._serial is None
+        assert driver.last_error == "Read timed out — serial port reset"
+
+    def test_reset_serial_on_lock_timeout_tolerates_a_broken_close(self) -> None:
+        """If the stuck port also fails to close cleanly, still reset state
+        rather than propagating the close() error."""
+        driver = _make_driver()
+        broken_serial = MagicMock()
+        broken_serial.close.side_effect = OSError("already gone")
+        driver._serial = broken_serial
+
+        driver._reset_serial_on_lock_timeout()
+
+        assert driver._serial is None
+        assert driver.last_error == "Read timed out — serial port reset"
+
+    def test_unexpected_exception_during_read_is_caught(self) -> None:
+        """Any exception mid-read (not just OSError from opening the port)
+        must be caught, recorded, and the port discarded -- not propagated."""
+        driver = _make_driver(address=2)
+        mock_serial = _make_serial_mock(b"")
+        mock_serial.write.side_effect = RuntimeError("simulated driver bug")
+        with patch("serial.Serial", return_value=mock_serial):
+            result = driver.get_data()
+
+        assert result is None
+        assert driver._serial is None
+        assert driver.last_error == "simulated driver bug"
+
+    def test_incomplete_read_without_a_prior_error_gets_a_synthesized_one(
+        self,
+    ) -> None:
+        """Defensive fallback: if a read comes back incomplete without
+        _send_command having already recorded a reason (structurally
+        shouldn't happen today, since every _send_command failure path sets
+        _last_error itself), get_data() still records *something* rather than
+        silently returning None with last_error still unset."""
+        driver = _make_driver(address=2)
+        mock_serial = _make_serial_mock(b"")
+        with (
+            patch("serial.Serial", return_value=mock_serial),
+            patch.object(driver, "_read_dsp", return_value=None),
+            patch.object(driver, "_read_energy", return_value=None),
+        ):
+            result = driver.get_data()
+
+        assert result is None
+        assert driver.last_error is not None
+        assert "did not respond" in driver.last_error
+
+
+# ---------------------------------------------------------------------------
+# discover(): _open_serial()'s three failure branches, _probe_address(), and
+# the overall scan loop
+# ---------------------------------------------------------------------------
+
+
+class TestSetupGuideAndConfigSchema:
+    def test_setup_guide_mentions_wiring_and_baud_rate(self) -> None:
+        guide = AuroraRS485Driver.setup_guide()
+        assert guide is not None
+        assert "RS-485" in guide
+        assert "19200" in guide
+
+    def test_config_schema_requires_address_not_baudrate(self) -> None:
+        schema = AuroraRS485Driver.config_schema()
+        keys = {field["key"]: field for field in schema}
+        assert keys["address"]["required"] is True
+        assert keys["baudrate"]["required"] is False
+
+
+class TestOpenSerial:
+    def test_permission_error_reports_port_busy(self) -> None:
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = PermissionError("in use")
+
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+
+        assert result.warnings == [
+            "Serial port is busy — the inverter may already be configured."
+        ]
+
+    def test_file_not_found_reports_no_adapter(self) -> None:
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = FileNotFoundError("no such device")
+
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+
+        assert "No USB-to-RS485 adapter detected" in result.warnings[0]
+
+    def test_other_exception_reports_a_generic_connection_problem(self) -> None:
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = RuntimeError("weird OS-level failure")
+
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+
+        assert "Check the USB-to-RS485 adapter connection" in result.warnings[0]
+
+    def test_success_returns_the_serial_object_not_a_discovery_result(self) -> None:
+        mock_serial_mod = MagicMock()
+        opened = MagicMock()
+        mock_serial_mod.Serial.return_value = opened
+
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+
+        assert result is opened
+
+
+class TestProbeAddress:
+    def test_returns_true_for_a_valid_response(self) -> None:
+        response = _build_response(struct.pack(">f", 100.0), alarm=0)
+        ser = _make_serial_mock(response)
+
+        assert AuroraRS485Driver._probe_address(ser, 2) is True
+
+    def test_returns_false_for_a_short_response(self) -> None:
+        ser = _make_serial_mock(b"\x00\x00")
+
+        assert AuroraRS485Driver._probe_address(ser, 2) is False
+
+    def test_returns_false_for_a_bad_crc(self) -> None:
+        ser = _make_serial_mock(bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF]))
+
+        assert AuroraRS485Driver._probe_address(ser, 2) is False
+
+
+class TestDiscover:
+    def test_returns_a_warning_when_pyserial_is_not_installed(self) -> None:
+        with patch.dict("sys.modules", {"serial": None}):
+            result = AuroraRS485Driver.discover()
+
+        assert "pyserial is not installed" in result.warnings[0]
+
+    def test_open_failure_returns_the_open_serial_warning_with_empty_devices(
+        self,
+    ) -> None:
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = FileNotFoundError("no adapter")
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == []
+        assert "No USB-to-RS485 adapter detected" in result.warnings[0]
+
+    def test_finds_an_inverter_at_the_first_probed_baudrate(self) -> None:
+        """discover() doesn't stop at the first find -- it exhaustively probes
+        every baud rate too (skipping addresses already found). The very
+        first read() call ever (address 1, baud 19200) succeeds; every other
+        call, at any address/baud, fails -- avoids ambiguity from the
+        already-found address being skipped in later baud-rate passes."""
+        import itertools
+
+        good_response = _build_response(struct.pack(">f", 1.0))
+        bad_response = bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF])
+
+        mock_serial_mod = MagicMock()
+        opened = _make_serial_mock(bad_response)
+        opened.read.side_effect = itertools.chain(
+            [good_response], itertools.repeat(bad_response)
+        )
+        mock_serial_mod.Serial.return_value = opened
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == [{"address": 1, "baudrate": 19200}]
+        opened.close.assert_called()
+
+    def test_no_response_on_any_address_or_baudrate_reports_a_warning(self) -> None:
+        no_response = bytes()
+        mock_serial_mod = MagicMock()
+        opened = _make_serial_mock(no_response)
+        mock_serial_mod.Serial.return_value = opened
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == []
+        assert "No inverters responded" in result.warnings[0]

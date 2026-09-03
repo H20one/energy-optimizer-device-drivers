@@ -13,6 +13,7 @@ that are easy to reintroduce given how the device's API actually behaves:
 from unittest.mock import MagicMock, patch
 
 import pytest
+from requests.exceptions import RequestException
 
 from energy_optimizer_drivers.base import DeviceType, EVChargerData
 from energy_optimizer_drivers.contract_validation import validate_contract_data
@@ -158,17 +159,54 @@ class TestAlfenResponseParsing:
         assert data.get("state") == "charging"
 
     def test_returns_none_on_login_failure(self) -> None:
+        # Was previously a false-positive: without mocking configure_session_tls,
+        # _login() raised FileNotFoundError reading the fake (nonexistent) cert
+        # path, silently caught by get_data()'s OUTER exception handler --
+        # `data is None` passed for the wrong reason, never actually reaching the
+        # 401 status-code branch this test's name claims to exercise.
         driver = _make_driver()
         failed_resp = MagicMock()
         failed_resp.status_code = 401
 
-        with patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls:
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session
             mock_session.post.return_value = failed_resp
             data = driver.get_data()
 
         assert data is None
+        assert driver.last_error == "Login failed: HTTP 401"
+
+    def test_returns_none_when_tofu_pinning_never_succeeds(self) -> None:
+        """If the charger was unreachable at both construction and every retry,
+        _login() must keep failing cleanly rather than proceeding with no cert."""
+        with patch(
+            "energy_optimizer_drivers.ev.alfen_eve.resolve_verify", return_value=False
+        ):
+            driver = AlfenEveDriver({"ip": _TEST_IP, "password": _TEST_PASSWORD})
+            data = driver.get_data()
+
+        assert data is None
+        assert driver.last_error is not None
+        assert "TLS certificate" in driver.last_error
+
+    def test_returns_none_on_network_error_during_login(self) -> None:
+        driver = _make_driver()
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_session = MagicMock()
+            mock_cls.return_value = mock_session
+            mock_session.post.side_effect = RequestException("host unreachable")
+            data = driver.get_data()
+
+        assert data is None
+        assert driver.last_error == "Login error: host unreachable"
 
 
 # ---------------------------------------------------------------------------
@@ -268,3 +306,198 @@ class TestAlfenPowerCalculation:
         assert data is not None
         # max_possible = 16 * 3 * 230 * 1.0 = 11040W; 99A×3×230 = 68270W >> 1.1×11040
         assert data.get("power_w", 0.0) == pytest.approx(0.0, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
+# discover(), get_status(), last_error, setup_guide(), config_schema()
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverAndStatus:
+    def test_discover_returns_an_empty_result(self) -> None:
+        """Alfen has no network discovery support -- always an empty result, not None."""
+        result = AlfenEveDriver.discover()
+        assert result.devices == []
+
+    def test_status_is_error_after_a_failed_read(self) -> None:
+        driver = _make_driver()
+        driver._last_error = "Login failed: HTTP 401"
+        assert driver.get_status() == "error"
+
+    def test_status_is_disabled_before_any_successful_read(self) -> None:
+        driver = _make_driver()
+        assert driver._last_success is None
+        assert driver.get_status() == "disabled"
+
+    def test_status_is_connected_after_a_successful_read(self) -> None:
+        driver = _make_driver()
+        driver._last_error = None
+        driver._last_success = 12345.0
+        assert driver.get_status() == "connected"
+
+    def test_last_error_reflects_the_most_recent_failure(self) -> None:
+        driver = _make_driver()
+        assert driver.last_error is None
+        driver._last_error = "Login failed: HTTP 401"
+        assert driver.last_error == "Login failed: HTTP 401"
+
+
+class TestSetupGuideAndConfigSchema:
+    def test_setup_guide_mentions_the_device_and_tls_pinning(self) -> None:
+        guide = AlfenEveDriver.setup_guide()
+        assert guide is not None
+        assert "Alfen" in guide
+        assert "trust on first use" in guide
+
+    def test_config_schema_requires_ip_and_password(self) -> None:
+        schema = AlfenEveDriver.config_schema()
+        keys = {field["key"]: field for field in schema}
+        assert keys["ip"]["required"] is True
+        assert keys["password"]["required"] is True
+        assert keys["timeout"]["required"] is False
+
+
+# ---------------------------------------------------------------------------
+# set_current()
+# ---------------------------------------------------------------------------
+
+
+class TestSetCurrent:
+    def test_returns_true_on_success(self) -> None:
+        driver = _make_driver()
+        ok_resp = MagicMock(status_code=200)
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_session = MagicMock()
+            mock_cls.return_value = mock_session
+            mock_session.post.return_value = ok_resp
+            result = driver.set_current(16.0)
+
+        assert result is True
+
+    def test_returns_false_when_login_fails(self) -> None:
+        driver = _make_driver()
+        failed_resp = MagicMock(status_code=401)
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_session = MagicMock()
+            mock_cls.return_value = mock_session
+            mock_session.post.return_value = failed_resp
+            result = driver.set_current(16.0)
+
+        assert result is False
+
+    def test_retries_once_on_expired_session_then_succeeds(self) -> None:
+        """A 401 mid-write drops the session and re-logs in once, not indefinitely.
+
+        Pre-seeds driver._session so _ensure_session() skips straight to the
+        write POST -- otherwise the first mocked 401 would be consumed by the
+        *initial* login instead of the write, never reaching the retry logic
+        this test targets.
+        """
+        driver = _make_driver()
+        original_session = MagicMock()
+        driver._session = original_session  # already "logged in"
+        login_ok = MagicMock(status_code=200)
+        expired = MagicMock(status_code=401)
+        write_ok = MagicMock(status_code=200)
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_cls.return_value = MagicMock()  # the re-login's new session
+            # First post() on the pre-seeded session is the write attempt ->
+            # 401 (expired). Re-login then creates a NEW mock session (mock_cls
+            # return value) whose post() calls are: login -> 200, retried write -> 200.
+            original_session.post.side_effect = [expired]
+            mock_cls.return_value.post.side_effect = [login_ok, write_ok]
+            result = driver.set_current(16.0)
+
+        assert result is True
+        assert original_session.post.call_count == 1
+        assert mock_cls.return_value.post.call_count == 2
+        # The session was actually replaced by the re-login, not just retried
+        # against the same (expired) one.
+        assert driver._session is mock_cls.return_value
+
+    def test_returns_false_if_relogin_after_expiry_also_fails(self) -> None:
+        driver = _make_driver()
+        driver._session = MagicMock()
+        expired = MagicMock(status_code=401)
+        relogin_failed = MagicMock(status_code=401)
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_cls.return_value = MagicMock()
+            driver._session.post.side_effect = [expired]
+            mock_cls.return_value.post.side_effect = [relogin_failed]
+            result = driver.set_current(16.0)
+
+        assert result is False
+
+    def test_returns_false_and_records_error_on_network_failure(self) -> None:
+        """A network error during the write itself (not login) is caught and recorded."""
+        driver = _make_driver()
+        driver._session = MagicMock()  # already "logged in" -- skips the login POST
+        driver._session.post.side_effect = RequestException("connection reset")
+
+        result = driver.set_current(16.0)
+
+        assert result is False
+        assert driver.last_error == "connection reset"
+
+
+# ---------------------------------------------------------------------------
+# _read_all_properties() — session-expiry and network-error branches
+# ---------------------------------------------------------------------------
+
+
+class TestReadAllProperties:
+    def test_401_mid_loop_discards_the_session_and_raises(self) -> None:
+        driver = _make_driver()
+        driver._session = MagicMock()  # pretend we already had one
+        mock_session = MagicMock()
+        expired = MagicMock(status_code=401)
+        mock_session.get.return_value = expired
+
+        with pytest.raises(RequestException):
+            driver._read_all_properties(mock_session)
+
+        assert driver._session is None
+
+    def test_network_error_propagates(self) -> None:
+        driver = _make_driver()
+        mock_session = MagicMock()
+        mock_session.get.side_effect = RequestException("timed out")
+
+        with pytest.raises(RequestException):
+            driver._read_all_properties(mock_session)
+
+    def test_get_data_returns_none_when_property_fetch_fails(self) -> None:
+        """The outer get_data() try/except turns a raised RequestException into None."""
+        driver = _make_driver()
+        login_ok = MagicMock(status_code=200)
+
+        with (
+            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        ):
+            mock_session = MagicMock()
+            mock_cls.return_value = mock_session
+            mock_session.post.return_value = login_ok
+            mock_session.get.side_effect = RequestException("timed out")
+            data = driver.get_data()
+
+        assert data is None
+        assert driver.last_error == "timed out"
+        # The failed read discards the session so the next poll re-logs in.
+        assert driver._session is None
