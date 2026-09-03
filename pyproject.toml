@@ -28,3 +28,10 @@ extend-exclude = ["docs"]
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = ["E203"]
+
+[tool.coverage.report]
+# Matches the 80% floor already enforced in energy-optimizer and
+# energy-optimizer-email-service. Real coverage is 99% as of the sweep that
+# added this gate -- set at 80 (not e.g. 95) to leave headroom for new,
+# not-yet-fully-tested driver modules rather than blocking every PR on 100%.
+fail_under = 80
