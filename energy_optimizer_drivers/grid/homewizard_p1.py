@@ -119,81 +119,17 @@ class HomewizardP1Driver(GridMeterDriver):
         product info including product_type and serial.
         Scans common LAN ranges (last octet 1-254) on the host's subnet.
         """
-        import socket
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from concurrent.futures import TimeoutError as FuturesTimeout
+        from energy_optimizer_drivers.lan_scan import scan_subnet
 
-        found: list[dict[str, Any]] = []
-
-        # Determine the host's local IP to derive the subnet.
-        # Connecting a UDP socket to a public IP (Google DNS) doesn't send
-        # any traffic — it only triggers the OS to resolve the default route
-        # so we can read back which local interface IP would be used.
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))  # NOSONAR — no data sent, route lookup only
-            local_ip = s.getsockname()[0]
-            s.close()
-        except OSError:
-            logger.warning("Discovery: could not determine local IP")
-            return DiscoveryResult(
-                warnings=[
-                    "Could not determine the local network address. "
-                    "Make sure your Ionemo base is connected to your "
-                    "home network."
-                ]
-            )
-
-        subnet_prefix = ".".join(local_ip.split(".")[:3])
-
-        ips = [
-            f"{subnet_prefix}.{i}"
-            for i in range(1, 255)
-            if f"{subnet_prefix}.{i}" != local_ip
-        ]
-
-        # Use an explicit pool (not a context manager) so we can call
-        # shutdown(wait=False, cancel_futures=True) on timeout.  The context
-        # manager always calls shutdown(wait=True), which would block for up to
-        # 12 s (ceil(253/50) × 2.5 s) after the as_completed timeout fires.
-        # Lower concurrency than a raw port-scanner would use — this still sweeps
-        # the full /24 (an unavoidable, consent-gated footprint on whatever network
-        # this runs on — the main app requires explicit user consent before
-        # triggering any discover() call), but 15 concurrent connections looks
-        # meaningfully less like an attack tool to network monitoring than 50,
-        # at a barely-noticeable cost on a local, low-latency LAN.
-        pool = ThreadPoolExecutor(max_workers=15, thread_name_prefix="discovery")
-        try:
-            futures = {pool.submit(_probe_homewizard, ip): ip for ip in ips}
-            try:
-                for future in as_completed(futures, timeout=15):
-                    result = future.result()
-                    if result:
-                        found.append(result)
-                        # DEBUG, not INFO: result["ip"] must not be logged at
-                        # INFO or above (SECURITY.md §6.1). Discovery
-                        # results are already surfaced to the user in the UI.
-                        logger.debug(
-                            "Discovery: found HomeWizard device at %s", result["ip"]
-                        )
-            except FuturesTimeout:
-                # Scan did not finish within 15 s — accept partial results.
-                logger.warning("Discovery: network scan timed out after 15 s")
-        finally:
-            # Cancel queued futures that haven't started yet.  In-progress
-            # _probe() calls run to their own 2.5 s timeout and then stop.
-            pool.shutdown(wait=False, cancel_futures=True)
-
-        if not found:
-            return DiscoveryResult(
-                warnings=[
-                    "No HomeWizard devices found on the network "
-                    f"({subnet_prefix}.x). Make sure the P1 dongle is "
-                    "powered on and connected to the same WiFi network."
-                ]
-            )
-
-        return DiscoveryResult(devices=found)
+        return scan_subnet(
+            _probe_homewizard,
+            lambda subnet_prefix: (
+                f"No HomeWizard devices found on the network ({subnet_prefix}.x). "
+                "Make sure the P1 dongle is powered on and connected to the same "
+                "WiFi network."
+            ),
+            label="HomeWizard discovery",
+        )
 
     def get_status(self) -> str:
         if self._last_error:

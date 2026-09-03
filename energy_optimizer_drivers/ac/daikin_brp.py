@@ -283,67 +283,18 @@ class DaikinBrpDriver(ACUnitDriver):
         GET /common/basic_info. Daikin adapters respond with
         ret=OK,type=aircon,… when reachable.
         """
-        import socket
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        from concurrent.futures import TimeoutError as FuturesTimeout
+        from energy_optimizer_drivers.lan_scan import scan_subnet
 
-        found: list[dict[str, Any]] = []
-
-        # Determine the host\u2019s local IP to derive the subnet to scan.
-        # Connecting a UDP socket to a public address never sends any traffic
-        # \u2014 it only triggers the OS to resolve the default route interface.
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))  # NOSONAR \u2014 no data sent, route lookup only
-            local_ip = s.getsockname()[0]
-            s.close()
-        except OSError:
-            logger.warning("Daikin discovery: could not determine local IP")
-            return DiscoveryResult(
-                warnings=[
-                    "Could not determine the local network address. "
-                    "Make sure your Ionemo base is connected to your home network."
-                ]
-            )
-
-        subnet_prefix = ".".join(local_ip.split(".")[:3])
-
-        ips = [
-            f"{subnet_prefix}.{i}"
-            for i in range(1, 255)
-            if f"{subnet_prefix}.{i}" != local_ip
-        ]
-
-        # Lower concurrency than a raw port-scanner would use — see the matching
-        # comment in drivers/grid/homewizard_p1.py's discover().
-        pool = ThreadPoolExecutor(max_workers=15, thread_name_prefix="daikin_disc")
-        try:
-            futures = {pool.submit(_probe_daikin, ip): ip for ip in ips}
-            try:
-                for future in as_completed(futures, timeout=15):
-                    result = future.result()
-                    if result:
-                        found.append(result)
-                        # DEBUG, not INFO: result["ip"] must not be logged at
-                        # INFO or above (SECURITY.md §6.1). Discovery
-                        # results are already surfaced to the user in the UI.
-                        logger.debug(
-                            "Daikin discovery: found adapter at %s", result["ip"]
-                        )
-            except FuturesTimeout:
-                logger.warning("Daikin discovery: scan timed out after 15 s")
-        finally:
-            pool.shutdown(wait=False, cancel_futures=True)
-
-        if not found:
-            return DiscoveryResult(
-                warnings=[
-                    "No Daikin BRP adapters found on the local network. "
-                    "Make sure the adapter is powered on and connected to "
-                    "the same network as your Ionemo base."
-                ]
-            )
-        return DiscoveryResult(devices=found)
+        return scan_subnet(
+            _probe_daikin,
+            lambda _subnet_prefix: (
+                "No Daikin BRP adapters found on the local network. "
+                "Make sure the adapter is powered on and connected to "
+                "the same network as your Ionemo base."
+            ),
+            label="Daikin discovery",
+            thread_name_prefix="daikin_disc",
+        )
 
     # ── Status ────────────────────────────────────────────────────────────────
 
