@@ -1,7 +1,7 @@
 """Tests for the "identity" (serial/MAC) extraction added to discover() probes.
 
-Covers energy_optimizer_drivers/grid/homewizard_p1.py's _probe_homewizard and
-energy_optimizer_drivers/ac/daikin_brp.py's _probe_daikin — the two drivers
+Covers ionemo_drivers/grid/homewizard_p1.py's _probe_homewizard and
+ionemo_drivers/ac/daikin_brp.py's _probe_daikin — the two drivers
 that support device-reconnect-by-identity in the main energy-optimizer app.
 All response shapes below are fabricated example data shaped to match each
 device's real response format, not captured from any real device.
@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from energy_optimizer_drivers.ac.daikin_brp import _probe_daikin
-from energy_optimizer_drivers.grid.homewizard_p1 import _probe_homewizard
+from ionemo_drivers.ac.daikin_brp import _probe_daikin
+from ionemo_drivers.grid.homewizard_p1 import _probe_homewizard
 
 
 class TestProbeHomewizardIdentity:
@@ -23,7 +23,7 @@ class TestProbeHomewizardIdentity:
             "serial": "aabbccddeeff",
         }
         with patch(
-            "energy_optimizer_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
+            "ionemo_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
         ):
             result = _probe_homewizard("192.0.2.178")
 
@@ -33,7 +33,7 @@ class TestProbeHomewizardIdentity:
         mock_response = MagicMock(status_code=200)
         mock_response.json.return_value = {"product_type": "HWE-P1"}
         with patch(
-            "energy_optimizer_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
+            "ionemo_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
         ):
             result = _probe_homewizard("192.0.2.178")
 
@@ -48,7 +48,7 @@ class TestProbeHomewizardIdentity:
             "serial": "deadbeef0000",
         }
         with patch(
-            "energy_optimizer_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
+            "ionemo_drivers.grid.homewizard_p1.requests.get", return_value=mock_response
         ):
             result = _probe_homewizard("192.0.2.99")
 
@@ -56,7 +56,7 @@ class TestProbeHomewizardIdentity:
 
     def test_returns_none_on_connection_error(self):
         with patch(
-            "energy_optimizer_drivers.grid.homewizard_p1.requests.get",
+            "ionemo_drivers.grid.homewizard_p1.requests.get",
             side_effect=ConnectionError("network unreachable"),
         ):
             result = _probe_homewizard("192.0.2.178")
@@ -78,14 +78,14 @@ class TestProbeDaikinIdentity:
 
     def test_returns_identity_from_real_device_response(self):
         mock_response = MagicMock(status_code=200, text=self._SAMPLE_BASIC_INFO)
-        with patch("energy_optimizer_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
+        with patch("ionemo_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
             result = _probe_daikin("192.0.2.153")
 
         assert result == {"ip": "192.0.2.153", "identity": "001122334455"}
 
     def test_omits_identity_when_mac_absent(self):
         mock_response = MagicMock(status_code=200, text="ret=OK,type=aircon,pow=0")
-        with patch("energy_optimizer_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
+        with patch("ionemo_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
             result = _probe_daikin("192.0.2.153")
 
         assert result is not None
@@ -94,14 +94,14 @@ class TestProbeDaikinIdentity:
 
     def test_returns_none_when_not_aircon(self):
         mock_response = MagicMock(status_code=200, text="ret=OK,type=other")
-        with patch("energy_optimizer_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
+        with patch("ionemo_drivers.ac.daikin_brp.requests.get", return_value=mock_response):
             result = _probe_daikin("192.0.2.99")
 
         assert result is None
 
     def test_returns_none_on_connection_error(self):
         with patch(
-            "energy_optimizer_drivers.ac.daikin_brp.requests.get",
+            "ionemo_drivers.ac.daikin_brp.requests.get",
             side_effect=ConnectionError("network unreachable"),
         ):
             result = _probe_daikin("192.0.2.153")

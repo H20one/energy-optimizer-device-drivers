@@ -29,7 +29,7 @@ checks and PR review are the actual defense here, not an OS-level boundary. Keep
 writing a driver: the checks catch common mistakes, but review and the contract itself are what
 actually keep this safe to depend on.
 
-## The contract (`energy_optimizer_drivers/base.py`)
+## The contract (`ionemo_drivers/base.py`)
 
 The **only** shared dependency between this repo and the main app. A driver:
 - receives a plain `config: dict` in `__init__` (the user's settings from the Add Device wizard,
@@ -69,11 +69,11 @@ these four named things, not "anything that could break the main app"):
 - **Changing `DRIVER_CALL_TIMEOUT`** or any other contract-level constant in `base.py`. The main
   app's own polling/scheduling logic is tuned around this value. **Checked by**
   `TestDriverCallTimeout.test_driver_call_timeout_value`.
-- **Renaming the `energy_optimizer.drivers` entry-point group** (`registry.py`) that external
+- **Renaming the `ionemo.drivers` entry-point group** (`registry.py`) that external
   third-party driver packages register under. Renaming it silently breaks discovery for every
   external driver, including the main app's own — nothing raises, they just stop being found.
   **Checked by** `TestEntryPointGroupName`.
-- **Renaming the top-level `energy_optimizer_drivers` package.** Not separately tested — this breaks
+- **Renaming the top-level `ionemo_drivers` package.** Not separately tested — this breaks
   every import in this repo's own test suite immediately, so unlike the others it can't slip through
   unnoticed.
 
@@ -87,10 +87,10 @@ existing driver, adding tests — is a normal PR, no separate discussion needed.
 ## How the main app consumes this package
 
 `energy-optimizer`'s `requirements.txt` pins a released tag of this repo
-(`git+https://github.com/H20one/energy-optimizer-device-drivers.git@vX.Y.Z`) — never an unpinned
-branch, for reproducible builds. At startup, `energy_optimizer_drivers.registry.load_all_drivers()`
+(`git+https://github.com/H20one/ionemo-drivers.git@vX.Y.Z`) — never an unpinned
+branch, for reproducible builds. At startup, `ionemo_drivers.registry.load_all_drivers()`
 imports the four builtin driver modules (each registers itself at import time) and separately
-discovers any externally pip-installed third-party drivers via the `energy_optimizer.drivers` entry
+discovers any externally pip-installed third-party drivers via the `ionemo.drivers` entry
 point group — a driver author doesn't have to get merged into this repo at all to work with the main
 app; they can ship and version their own package independently.
 

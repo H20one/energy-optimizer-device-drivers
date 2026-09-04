@@ -34,4 +34,4 @@ jobs:
         run: basedpyright
 
       - name: Contract + security compliance tests
-        run: pytest tests/ -v --cov=energy_optimizer_drivers --cov-report=term-missing
+        run: pytest tests/ -v --cov=ionemo_drivers --cov-report=term-missing

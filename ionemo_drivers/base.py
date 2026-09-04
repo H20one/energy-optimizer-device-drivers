@@ -6,7 +6,7 @@ All drivers import from here and implement these interfaces.
 See docs/contracts/ for the full data contract specification per device type.
 Required vs optional fields below are marked with `Required[...]`/plain-optional
 so the distinction is checkable at runtime, not just documented in comments —
-see `energy_optimizer_drivers.contract_validation.validate_contract_data()`.
+see `ionemo_drivers.contract_validation.validate_contract_data()`.
 """
 
 from abc import ABC, abstractmethod
@@ -290,7 +290,7 @@ class BaseDriver(ABC):
         unconditionally, with no need to check whether a given driver
         supports it first.
 
-        LAN-based drivers using energy_optimizer_drivers.lan_scan.scan_subnet()
+        LAN-based drivers using ionemo_drivers.lan_scan.scan_subnet()
         should override this to forward quick=True to their own scan_subnet()
         call (see grid/homewizard_p1.py, ac/daikin_brp.py for the pattern) --
         a fast host-presence pre-filter runs before the slow per-address

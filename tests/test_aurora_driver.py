@@ -16,9 +16,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from energy_optimizer_drivers.base import DeviceType, DiscoveryResult
-from energy_optimizer_drivers.contract_validation import validate_contract_data
-from energy_optimizer_drivers.pv.aurora_rs485 import AuroraRS485Driver, _crc16
+from ionemo_drivers.base import DeviceType, DiscoveryResult
+from ionemo_drivers.contract_validation import validate_contract_data
+from ionemo_drivers.pv.aurora_rs485 import AuroraRS485Driver, _crc16
 
 # ---------------------------------------------------------------------------
 # Helpers

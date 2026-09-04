@@ -19,8 +19,8 @@ one), not "already covered, just not mentioned."
 import inspect
 from unittest.mock import patch
 
-from energy_optimizer_drivers import registry
-from energy_optimizer_drivers.base import (
+from ionemo_drivers import registry
+from ionemo_drivers.base import (
     DRIVER_CALL_TIMEOUT,
     ACUnitDriver,
     BaseDriver,
@@ -103,13 +103,13 @@ class TestDriverCallTimeout:
 
 class TestEntryPointGroupName:
     """External driver packages register under this exact string
-    (`energy_optimizer.drivers`) via their own pyproject.toml. Renaming it
+    (`ionemo.drivers`) via their own pyproject.toml. Renaming it
     silently breaks discovery for every external driver, including the main
     app's own — nothing would raise, they'd just stop being found."""
 
     def test_external_drivers_load_from_the_documented_group_name(self) -> None:
-        with patch("energy_optimizer_drivers.registry.entry_points") as mock_entry_points:
+        with patch("ionemo_drivers.registry.entry_points") as mock_entry_points:
             mock_entry_points.return_value = []
             registry._load_external_drivers()
 
-        mock_entry_points.assert_called_once_with(group="energy_optimizer.drivers")
+        mock_entry_points.assert_called_once_with(group="ionemo.drivers")

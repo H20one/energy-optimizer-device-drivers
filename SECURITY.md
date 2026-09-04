@@ -12,10 +12,10 @@ This document defines the security rules and data safety requirements that **eve
 
 ## Scope
 
-These rules apply to all code inside `energy_optimizer_drivers/` — including builtin drivers, contributed drivers, and pip-installed plugins discovered via the `energy_optimizer.drivers` entry point.
+These rules apply to all code inside `ionemo_drivers/` — including builtin drivers, contributed drivers, and pip-installed plugins discovered via the `ionemo.drivers` entry point.
 
 **Note on automated enforcement:** `tests/test_security_compliance.py` can only scan files
-physically present in this repo's `energy_optimizer_drivers/` tree (builtin drivers + root-level infra). It cannot
+physically present in this repo's `ionemo_drivers/` tree (builtin drivers + root-level infra). It cannot
 and does not scan externally pip-installed driver packages — those are only covered by this
 document as policy and by manual/agent-assisted review (`.github/agents/driver-reviewer.agent.md`),
 not by the automated test suite. See "Enforcement" at the bottom for exactly which rules below
@@ -114,7 +114,7 @@ one instance of it.
 
 ### 2.2 TLS / Certificate Handling
 
-- Drivers communicating over HTTPS with a self-signed device certificate **MUST** use `energy_optimizer_drivers.cert_store.resolve_verify()` to handle TLS verification. This pins the certificate on first connection (trust on first use / TOFU) and verifies it on every subsequent connection.
+- Drivers communicating over HTTPS with a self-signed device certificate **MUST** use `ionemo_drivers.cert_store.resolve_verify()` to handle TLS verification. This pins the certificate on first connection (trust on first use / TOFU) and verifies it on every subsequent connection.
 - Drivers **MUST NOT** disable verification globally or monkey-patch certificate validation.
 - Drivers **MUST NOT** call `urllib3.disable_warnings()` unconditionally — only suppress warnings when `resolve_verify()` returns `False` (i.e. pinning failed).
 - If a `ca_cert_path` is provided in config, pass it to `resolve_verify()` — it takes priority over TOFU.
@@ -148,7 +148,7 @@ Drivers **MUST NOT**:
 Exceptions:
 
 - Reading a CA certificate file path provided via `config` is permitted.
-- Using `energy_optimizer_drivers.cert_store.resolve_verify()` for TOFU certificate pinning is permitted — the cert store handles all filesystem I/O on the driver's behalf.
+- Using `ionemo_drivers.cert_store.resolve_verify()` for TOFU certificate pinning is permitted — the cert store handles all filesystem I/O on the driver's behalf.
 - Serial port access (`/dev/ttyUSB*`) for RS-485/Modbus drivers is permitted.
 
 ### 3.3 No Process Spawning

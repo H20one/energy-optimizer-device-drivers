@@ -1,4 +1,4 @@
-"""Tests for energy_optimizer_drivers/lan_scan.py.
+"""Tests for ionemo_drivers/lan_scan.py.
 
 Regression coverage for a real bug found via a live deployment: the default
 scan_timeout (15s) didn't leave enough time for the full /24 sweep to reach
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, mock_open, patch
 
-from energy_optimizer_drivers.lan_scan import _discover_live_hosts, scan_subnet
+from ionemo_drivers.lan_scan import _discover_live_hosts, scan_subnet
 
 _FAKE_ARP_TABLE = (
     "IP address       HW type     Flags       HW address            Mask     Device\n"
@@ -50,7 +50,7 @@ class TestScanTimeoutCoversTheWholeSubnet:
                 return {"ip": ip}
             return None  # instant "not found" -- keeps this test fast
 
-        with patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls:
+        with patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls:
             mock_sock = MagicMock()
             mock_sock.getsockname.return_value = ("192.0.2.99", 0)
             mock_socket_cls.return_value = mock_sock
@@ -81,7 +81,7 @@ class TestScanSubnetBasics:
             captured_subnets.append(subnet)
             return f"nothing on {subnet}"
 
-        with patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls:
+        with patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls:
             mock_sock = MagicMock()
             mock_sock.getsockname.return_value = ("192.0.2.99", 0)
             mock_socket_cls.return_value = mock_sock
@@ -99,7 +99,7 @@ class TestScanSubnetBasics:
             probed_ips.append(ip)
             return None
 
-        with patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls:
+        with patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls:
             mock_sock = MagicMock()
             mock_sock.getsockname.return_value = ("192.0.2.99", 0)
             mock_socket_cls.return_value = mock_sock
@@ -117,12 +117,12 @@ class TestDiscoverLiveHosts:
 
     def test_returns_addresses_with_a_resolved_mac(self) -> None:
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch("ionemo_drivers.lan_scan.socket.socket"),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=_FAKE_ARP_TABLE),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             result = _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
 
@@ -130,12 +130,12 @@ class TestDiscoverLiveHosts:
 
     def test_ignores_a_resolved_address_not_in_the_requested_list(self) -> None:
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch("ionemo_drivers.lan_scan.socket.socket"),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=_FAKE_ARP_TABLE),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             # 192.0.2.10 has a real MAC in the fake table but isn't requested.
             result = _discover_live_hosts(["192.0.2.12"])
@@ -149,12 +149,12 @@ class TestDiscoverLiveHosts:
             "192.0.2.12       0x1         0x2         aa:bb:cc:dd:ee:03     *        eth0\n"
         )
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch("ionemo_drivers.lan_scan.socket.socket"),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=malformed_table),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             result = _discover_live_hosts(["192.0.2.12"])
 
@@ -162,12 +162,12 @@ class TestDiscoverLiveHosts:
 
     def test_returns_none_when_proc_net_arp_is_unreadable(self) -> None:
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch("ionemo_drivers.lan_scan.socket.socket"),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 side_effect=OSError("no such file"),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             result = _discover_live_hosts(["192.0.2.10"])
 
@@ -183,14 +183,14 @@ class TestDiscoverLiveHosts:
 
         with (
             patch(
-                "energy_optimizer_drivers.lan_scan.socket.socket",
+                "ionemo_drivers.lan_scan.socket.socket",
                 side_effect=_fake_socket,
             ),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=_FAKE_ARP_TABLE),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
 
@@ -215,16 +215,16 @@ class TestDiscoverLiveHosts:
 
         with (
             patch(
-                "energy_optimizer_drivers.lan_scan.socket.socket",
+                "ionemo_drivers.lan_scan.socket.socket",
                 side_effect=lambda *a, **k: MagicMock(
                     connect=MagicMock(side_effect=_connect_side_effect)
                 ),
             ),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=_FAKE_ARP_TABLE),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             result = _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
 
@@ -241,14 +241,14 @@ class TestDiscoverLiveHosts:
 
         with (
             patch(
-                "energy_optimizer_drivers.lan_scan.socket.socket",
+                "ionemo_drivers.lan_scan.socket.socket",
                 side_effect=_fake_socket,
             ),
             patch(
-                "energy_optimizer_drivers.lan_scan.open",
+                "ionemo_drivers.lan_scan.open",
                 mock_open(read_data=_FAKE_ARP_TABLE),
             ),
-            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+            patch("ionemo_drivers.lan_scan.time.sleep"),
         ):
             _discover_live_hosts(["192.0.2.10"])
 
@@ -268,9 +268,9 @@ class TestScanSubnetQuickMode:
             return None
 
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls,
             patch(
-                "energy_optimizer_drivers.lan_scan._discover_live_hosts",
+                "ionemo_drivers.lan_scan._discover_live_hosts",
                 return_value={"192.0.2.10", "192.0.2.200"},
             ),
         ):
@@ -292,9 +292,9 @@ class TestScanSubnetQuickMode:
             return None
 
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls,
             patch(
-                "energy_optimizer_drivers.lan_scan._discover_live_hosts",
+                "ionemo_drivers.lan_scan._discover_live_hosts",
                 return_value=None,
             ),
         ):
@@ -308,9 +308,9 @@ class TestScanSubnetQuickMode:
 
     def test_default_quick_is_false_and_never_calls_the_prefilter(self) -> None:
         with (
-            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch("ionemo_drivers.lan_scan.socket.socket") as mock_socket_cls,
             patch(
-                "energy_optimizer_drivers.lan_scan._discover_live_hosts"
+                "ionemo_drivers.lan_scan._discover_live_hosts"
             ) as mock_prefilter,
         ):
             mock_sock = MagicMock()

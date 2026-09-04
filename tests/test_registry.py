@@ -1,4 +1,4 @@
-"""Tests for energy_optimizer_drivers/registry.py.
+"""Tests for ionemo_drivers/registry.py.
 
 DRIVER_REGISTRY is a module-level global, and `_load_builtin_drivers()` calls
 `importlib.import_module()`, which is a no-op for a module already in
@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from energy_optimizer_drivers import registry
-from energy_optimizer_drivers.base import BaseDriver, DeviceType
-from energy_optimizer_drivers.registry import (
+from ionemo_drivers import registry
+from ionemo_drivers.base import BaseDriver, DeviceType
+from ionemo_drivers.registry import (
     _load_builtin_drivers,
     _load_external_drivers,
     get_driver,
@@ -103,7 +103,7 @@ class TestLoadBuiltinDrivers:
 
         with (
             patch(
-                "energy_optimizer_drivers.registry.importlib.import_module",
+                "ionemo_drivers.registry.importlib.import_module",
                 side_effect=_mock_import,
             ),
             caplog.at_level("WARNING"),
@@ -111,13 +111,13 @@ class TestLoadBuiltinDrivers:
             _load_builtin_drivers()
 
         assert attempted == [
-            "energy_optimizer_drivers.grid.homewizard_p1",
-            "energy_optimizer_drivers.pv.aurora_rs485",
-            "energy_optimizer_drivers.ev.alfen_eve",
-            "energy_optimizer_drivers.ac.daikin_brp",
+            "ionemo_drivers.grid.homewizard_p1",
+            "ionemo_drivers.pv.aurora_rs485",
+            "ionemo_drivers.ev.alfen_eve",
+            "ionemo_drivers.ac.daikin_brp",
         ]
         assert (
-            "Could not load builtin driver energy_optimizer_drivers.pv.aurora_rs485"
+            "Could not load builtin driver ionemo_drivers.pv.aurora_rs485"
             in caplog.text
         )
 
@@ -129,7 +129,7 @@ class TestLoadExternalDrivers:
         fake_ep.name = "some_vendor_driver"
         fake_ep.load.return_value = _DummyDriver
 
-        with patch("energy_optimizer_drivers.registry.entry_points", return_value=[fake_ep]):
+        with patch("ionemo_drivers.registry.entry_points", return_value=[fake_ep]):
             _load_external_drivers()
 
         assert registry.DRIVER_REGISTRY["some_vendor_driver"] is _DummyDriver
@@ -145,7 +145,7 @@ class TestLoadExternalDrivers:
 
         with (
             patch(
-                "energy_optimizer_drivers.registry.entry_points",
+                "ionemo_drivers.registry.entry_points",
                 return_value=[broken_ep, good_ep],
             ),
             caplog.at_level("WARNING"),
@@ -159,7 +159,7 @@ class TestLoadExternalDrivers:
     def test_no_entry_points_leaves_registry_unchanged(self, monkeypatch) -> None:
         monkeypatch.setattr(registry, "DRIVER_REGISTRY", {"existing": _DummyDriver})
 
-        with patch("energy_optimizer_drivers.registry.entry_points", return_value=[]):
+        with patch("ionemo_drivers.registry.entry_points", return_value=[]):
             _load_external_drivers()
 
         assert registry.DRIVER_REGISTRY == {"existing": _DummyDriver}
@@ -169,8 +169,8 @@ class TestLoadAllDrivers:
     def test_calls_both_builtin_and_external_loading(self, monkeypatch) -> None:
         monkeypatch.setattr(registry, "DRIVER_REGISTRY", {})
         with (
-            patch("energy_optimizer_drivers.registry._load_builtin_drivers") as mock_builtin,
-            patch("energy_optimizer_drivers.registry._load_external_drivers") as mock_external,
+            patch("ionemo_drivers.registry._load_builtin_drivers") as mock_builtin,
+            patch("ionemo_drivers.registry._load_external_drivers") as mock_external,
         ):
             load_all_drivers()
 

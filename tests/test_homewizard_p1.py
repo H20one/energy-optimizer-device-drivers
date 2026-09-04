@@ -1,4 +1,4 @@
-"""Tests for energy_optimizer_drivers/grid/homewizard_p1.py — HomewizardP1Driver.
+"""Tests for ionemo_drivers/grid/homewizard_p1.py — HomewizardP1Driver.
 
 _probe_homewizard's identity extraction is covered separately in
 test_driver_discover_identity.py; this file covers the driver class itself:
@@ -14,9 +14,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from energy_optimizer_drivers.base import DeviceType
-from energy_optimizer_drivers.contract_validation import validate_contract_data
-from energy_optimizer_drivers.grid.homewizard_p1 import HomewizardP1Driver
+from ionemo_drivers.base import DeviceType
+from ionemo_drivers.contract_validation import validate_contract_data
+from ionemo_drivers.grid.homewizard_p1 import HomewizardP1Driver
 
 # RFC 5737 TEST-NET-1 — reserved for documentation/testing, never a real deployment.
 _TEST_IP = "192.0.2.10"
@@ -184,7 +184,7 @@ class TestDiscover:
         with (
             patch("socket.socket", return_value=self._mock_local_socket("192.0.2.50")),
             patch(
-                "energy_optimizer_drivers.grid.homewizard_p1._probe_homewizard",
+                "ionemo_drivers.grid.homewizard_p1._probe_homewizard",
                 side_effect=fake_probe,
             ),
         ):
@@ -197,7 +197,7 @@ class TestDiscover:
         with (
             patch("socket.socket", return_value=self._mock_local_socket("192.0.2.50")),
             patch(
-                "energy_optimizer_drivers.grid.homewizard_p1._probe_homewizard",
+                "ionemo_drivers.grid.homewizard_p1._probe_homewizard",
                 return_value=None,
             ),
         ):
@@ -224,13 +224,13 @@ class TestDiscoverQuick:
     def test_discover_forwards_quick_false(self) -> None:
         # scan_subnet is imported lazily inside _run_discovery(), so it must
         # be patched at its source module, not homewizard_p1's namespace.
-        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+        with patch("ionemo_drivers.lan_scan.scan_subnet") as mock_scan:
             HomewizardP1Driver.discover()
 
         assert mock_scan.call_args.kwargs["quick"] is False
 
     def test_discover_quick_forwards_quick_true(self) -> None:
-        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+        with patch("ionemo_drivers.lan_scan.scan_subnet") as mock_scan:
             HomewizardP1Driver.discover_quick()
 
         assert mock_scan.call_args.kwargs["quick"] is True

@@ -32,7 +32,7 @@ from urllib.parse import urlencode
 import requests
 from requests.exceptions import RequestException
 
-from energy_optimizer_drivers.base import (
+from ionemo_drivers.base import (
     ACUnitData,
     ACUnitDriver,
     ConfigField,
@@ -40,7 +40,7 @@ from energy_optimizer_drivers.base import (
     DeviceType,
     DiscoveryResult,
 )
-from energy_optimizer_drivers.registry import register_driver
+from ionemo_drivers.registry import register_driver
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +292,7 @@ class DaikinBrpDriver(ACUnitDriver):
 
     @classmethod
     def _run_discovery(cls, quick: bool) -> DiscoveryResult:
-        from energy_optimizer_drivers.lan_scan import scan_subnet
+        from ionemo_drivers.lan_scan import scan_subnet
 
         return scan_subnet(
             _probe_daikin,
