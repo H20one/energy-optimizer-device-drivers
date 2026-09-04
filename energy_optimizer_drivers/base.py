@@ -191,7 +191,7 @@ class ACUnitData(TypedDict, total=False):
     target_temp_c: Required[float]  # Set-point temperature
 
     # OPTIONAL — None means device doesn't support it
-    fan_speed: str | None  # "auto" | "low" | "medium" | "high"
+    fan_speed: str | None  # driver-specific vocabulary, not a fixed enum -- see docs/contracts/ac_unit.md
     humidity_pct: float | None  # Relative indoor humidity (%)
 
 

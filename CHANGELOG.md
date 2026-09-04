@@ -2,6 +2,28 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.3.0 — 2026-09-04
+
+### Changed
+- `aurora_rs485.py` no longer hardcodes its serial port. Found during a hygiene sweep:
+  `_PORT = "/dev/ttyUSB1"` was a fact about one specific deployment's Docker device-mapping choice
+  (a `docker-compose.override.yml` remap in the main app repo), not a fact about the inverter model
+  — a different deployment with a plain passthrough would silently get a wrong, hardcoded path and
+  no way to fix it short of forking the driver. `port` is now an optional `config_schema()` field,
+  same as `address`/`baudrate`, defaulting to `/dev/ttyUSB0` (the common single-adapter case).
+  `discover()` now reports the port it actually used in each found device's config, same as it
+  already does for `baudrate`.
+
+  **Migration note:** the default changed from `/dev/ttyUSB1` to `/dev/ttyUSB0` — if an existing
+  deployment relied on the old hardcoded value (e.g. via a `docker-compose.override.yml` device
+  remap to make the container-internal path match), update that remap to a plain
+  `/dev/ttyUSB0:/dev/ttyUSB0` passthrough matching the new default, or set the device's `port`
+  config explicitly if your setup genuinely needs something else. `docs/drivers/aurora_rs485.md` now
+  recommends the plain passthrough as the default for any deployment (a base station shouldn't need
+  device-specific host configuration, like a udev rule matching one particular adapter's chip ID,
+  just to work) -- a custom udev symlink is now documented as an optional, per-installation choice
+  for someone with more than one USB-serial adapter, not something to bake into a shared image.
+
 ## 0.2.2 — 2026-09-04
 
 ### Fixed

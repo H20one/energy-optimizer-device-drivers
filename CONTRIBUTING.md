@@ -250,11 +250,17 @@ The app discovers it automatically at startup via `importlib.metadata.entry_poin
 
 ### Serial / RS-485 Port Paths
 
-For serial drivers, **do not expose the port path in `config_schema()`**. The serial port is mapped
-to a fixed path (`/dev/ttyUSB1`) inside the container via `docker-compose.override.yml` and a udev
-symlink — that mapping lives in the `energy-optimizer` app repo (this package is installed into that
-container, not run standalone), and users never need to change it. Hardcode the port as a class
-constant and use it directly in `get_data()`.
+For serial drivers, **expose the port path as an optional `config_schema()` field**, with a sane
+default (e.g. `/dev/ttyUSB0`). Do not hardcode it as a class constant. This used to be the opposite
+recommendation — reasoning that "the port is mapped to a fixed path via `docker-compose.override.yml`
+and a udev symlink, so users never need to change it" — but that's a fact about one specific
+deployment's own Docker device-mapping choice, not a fact this package (a generic, installable
+driver library other people's base stations also use) can assume holds everywhere. A different
+deployment with a plain device passthrough, or a base station with more than one USB-serial adapter,
+needs a different path, and a hardcoded constant gives them no way to fix it short of forking the
+driver. See `pv/aurora_rs485.py`'s `port` field (and its `_DEFAULT_PORT` docstring) for the pattern —
+found and fixed via a hygiene sweep after it turned out the "fixed" path only ever worked because of
+a matching remap in the `energy-optimizer` app repo's `docker-compose.override.yml`.
 
 ### Discovery (optional)
 

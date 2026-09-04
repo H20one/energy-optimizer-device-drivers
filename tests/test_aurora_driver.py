@@ -315,7 +315,7 @@ class TestAuroraGetStatus:
         with patch(
             "serial.Serial",
             side_effect=OSError(
-                "could not open port /dev/ttyUSB1: No such file or directory"
+                "could not open port /dev/ttyUSB0: No such file or directory"
             ),
         ):
             result = driver.get_data()
@@ -477,6 +477,34 @@ class TestSetupGuideAndConfigSchema:
         assert keys["address"]["required"] is True
         assert keys["baudrate"]["required"] is False
 
+    def test_config_schema_port_is_optional_and_defaults_to_ttyUSB0(self) -> None:
+        """Regression guard: the port must stay a configurable field, not a
+        hardcoded constant -- see aurora_rs485.py's _DEFAULT_PORT docstring
+        for why (it's a fact about the base station's own USB topology, not
+        about this inverter model)."""
+        schema = AuroraRS485Driver.config_schema()
+        keys = {field["key"]: field for field in schema}
+        assert keys["port"]["required"] is False
+        assert keys["port"]["default"] == "/dev/ttyUSB0"
+
+
+class TestAuroraConfigurablePort:
+    def test_defaults_to_ttyUSB0_when_not_configured(self) -> None:
+        driver = AuroraRS485Driver({"address": 2})
+        mock_serial = _make_serial_mock(b"")  # empty response -- only the open() call matters here
+        with patch("serial.Serial", return_value=mock_serial) as mock_serial_cls:
+            driver.get_data()
+
+        assert mock_serial_cls.call_args.kwargs["port"] == "/dev/ttyUSB0"
+
+    def test_uses_the_configured_port_override(self) -> None:
+        driver = AuroraRS485Driver({"address": 2, "port": "/dev/aurora"})
+        mock_serial = _make_serial_mock(b"")  # empty response -- only the open() call matters here
+        with patch("serial.Serial", return_value=mock_serial) as mock_serial_cls:
+            driver.get_data()
+
+        assert mock_serial_cls.call_args.kwargs["port"] == "/dev/aurora"
+
 
 class TestOpenSerial:
     def test_permission_error_reports_port_busy(self) -> None:
@@ -582,7 +610,9 @@ class TestDiscover:
         with patch.dict("sys.modules", {"serial": mock_serial_mod}):
             result = AuroraRS485Driver.discover()
 
-        assert result.devices == [{"address": 1, "baudrate": 19200}]
+        assert result.devices == [
+            {"address": 1, "baudrate": 19200, "port": AuroraRS485Driver._DEFAULT_PORT}
+        ]
         opened.close.assert_called()
 
     def test_no_response_on_any_address_or_baudrate_reports_a_warning(self) -> None:

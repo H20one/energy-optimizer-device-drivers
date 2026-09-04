@@ -12,12 +12,17 @@
 
 ## Configuration
 
-| Field      | Type   | Required | Default | Description                                                        |
-| ---------- | ------ | :------: | ------- | ------------------------------------------------------------------ |
-| `address`  | number |   Yes    | —       | RS-485 device address (factory default is `2`)                     |
-| `baudrate` | select |    No    | `19200` | One of `9600`/`19200`/`38400`/`57600`/`115200` — Aurora default is 19200, 8N1 |
+| Field      | Type   | Required | Default        | Description                                                        |
+| ---------- | ------ | :------: | -------------- | ------------------------------------------------------------------ |
+| `address`  | number |   Yes    | —              | RS-485 device address (factory default is `2`)                     |
+| `baudrate` | select |    No    | `19200`        | One of `9600`/`19200`/`38400`/`57600`/`115200` — Aurora default is 19200, 8N1 |
+| `port`     | text   |    No    | `/dev/ttyUSB0` | Device path *inside the container* for the USB-to-RS485 adapter    |
 
-The serial port is fixed at `/dev/ttyUSB1` inside the container. Use the udev symlink approach (see hardware setup below) to map any adapter to that path.
+`port` is a Linux USB-serial enumeration fact, not a property of this inverter model — it depends
+entirely on that specific base station's own USB topology (how many other adapters are attached,
+and any container device-mapping in `docker-compose.override.yml`), so it's a plain configurable
+field with a sane default, never hardcoded. See "Docker device passthrough" below for the
+recommended way to keep it stable across reboots.
 
 ---
 
@@ -39,27 +44,38 @@ Use shielded twisted-pair cable for runs longer than 5 m. Terminate with 120 Ω 
 
 ### Docker device passthrough (Raspberry Pi)
 
-Pass the USB adapter into the container via `docker-compose.override.yml`:
+Pass the adapter straight through in `docker-compose.override.yml`, with no host-side setup:
 
 ```yaml
 services:
   energy-optimizer:
     devices:
-      - /dev/aurora:/dev/ttyUSB1
+      - /dev/ttyUSB0:/dev/ttyUSB0
 ```
 
-Create a stable udev symlink so the device name survives reboots:
+That's it — this matches `port`'s `/dev/ttyUSB0` default, so the driver needs zero configuration
+for the common case (one USB-serial adapter attached). A base station shouldn't need to know in
+advance which specific device model is plugged in, so this is the recommended default for any
+deployment, not just a single-household one.
+
+**If you have more than one USB-serial adapter** and want a stable path that survives a reboot
+regardless of enumeration order, you can create your own udev rule matching the adapter's USB
+vendor/product ID (find them with `lsusb`) and pass that symlink through instead — then set this
+driver's **Serial Port** field to match. This is a per-installation choice you make for your own
+setup, not something a shipped base station image should carry pre-configured for one specific
+inverter brand:
 
 ```bash
-# /etc/udev/rules.d/99-aurora.rules
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="aurora"
+# e.g. /etc/udev/rules.d/99-my-rs485-adapter.rules
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="my_adapter"
 ```
 
-Reload: `sudo udevadm control --reload-rules && sudo udevadm trigger`
-
-> Mapping the raw device node directly (e.g. `/dev/ttyUSB0:/dev/ttyUSB1`) instead of the symlink
-> works too, but reintroduces the reboot-renumbering risk the symlink exists to avoid — worth
-> knowing if you see this driver intermittently lose its port after a host reboot.
+```yaml
+services:
+  energy-optimizer:
+    devices:
+      - /dev/my_adapter:/dev/my_adapter
+```
 
 ---
 
