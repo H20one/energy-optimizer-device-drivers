@@ -34,11 +34,12 @@ def _discover_live_hosts(ips: list[str], wait_s: float = 0.4) -> set[str] | None
     exact function's local_ip trick as precedent). This generalizes it from
     one address (the gateway) to the whole candidate range.
 
-    Confirmed live against a real deployment (2026-09-04): all real hosts on
+    Timing behaviour, as last spiked against a real deployment: real hosts on
     the LAN resolved within ~10ms of the nudge, well inside the 0.4s default
     wait_s; zero false positives on genuinely unused addresses waited out to
-    2s. Real devices normally already have a warm ARP entry from ambient
-    traffic (routers/phones/etc. talk on their own); the nudge exists for
+    2s -- re-verify this if wait_s is ever tuned down. Real devices normally
+    already have a warm ARP entry from ambient traffic (routers/phones/etc.
+    talk on their own); the nudge exists for
     the cold case -- a device with no recent traffic -- which is exactly
     what src/setup/network.py's own comment already relies on ("nudge the
     ARP entry to populate if this is the very first lookup since boot").

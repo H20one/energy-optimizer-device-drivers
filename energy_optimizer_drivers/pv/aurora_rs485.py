@@ -64,13 +64,20 @@ class AuroraRS485Driver(PVInverterDriver):
     device_type = DeviceType.PV_INVERTER
     connection_type = ConnectionType.SERIAL
 
-    # Fixed serial port — not user-configurable.
-    _PORT = "/dev/ttyUSB1"
+    # Default serial port when a device's config doesn't specify one (see
+    # config_schema()'s "port" field). This is a Linux USB-serial enumeration
+    # convention, not a fact about this inverter model -- the actual path
+    # depends entirely on that specific base station's own USB topology
+    # (how many other adapters are attached, and container device-mapping
+    # choices like docker-compose.override.yml's `devices:` list in the main
+    # app repo), so it must stay overridable rather than hardcoded.
+    _DEFAULT_PORT = "/dev/ttyUSB0"
     _DEFAULT_BAUDRATE = 19200
 
     def __init__(self, config: dict[str, Any]) -> None:
         self._address: int = config["address"]
         self._baudrate: int = int(config.get("baudrate", self._DEFAULT_BAUDRATE))
+        self._port: str = config.get("port", self._DEFAULT_PORT)
         self._last_error: str | None = None
         self._last_success: float | None = None
         self._serial: Any = None
@@ -107,8 +114,17 @@ class AuroraRS485Driver(PVInverterDriver):
             "(always use the **same USB port** to keep the device path stable).\n"
             "2. If the adapter isn't recognized automatically, install the driver "
             "for your chipset (FTDI or CH340).\n"
-            "3. On Linux/Raspberry Pi the port is typically `/dev/ttyUSB0`. "
-            "On Windows, check Device Manager \u2192 Ports for the COM number.\n\n"
+            "3. Your Ionemo base station runs Linux, where the port defaults "
+            "to `/dev/ttyUSB0` (the usual case with one adapter attached) -- "
+            "this is a Linux device-path convention, not something specific "
+            "to any one board, so it applies the same way on any Ionemo base "
+            "regardless of model. If the default doesn't work, connect to "
+            "the base station and run `ls /dev/ttyUSB*` to see what's "
+            "actually there (some adapter chipsets show up as `/dev/ttyACM0` "
+            "instead), then enter that in the **Serial Port** field below. "
+            "Also override it if you have more than one USB-serial adapter, "
+            "or a udev symlink / container device-mapping rule pointing "
+            "somewhere else.\n\n"
             "\n### 3. Inverter Settings\n\n"
             "Using the inverter's front panel or Aurora Manager TL software:\n\n"
             "- **Baud Rate:** 19200 (factory default)\n"
@@ -143,6 +159,21 @@ class AuroraRS485Driver(PVInverterDriver):
                 "hint": "Factory default is 19200. Only change if you "
                 "modified the inverter's communication settings.",
             },
+            {
+                "key": "port",
+                "label": "Serial Port",
+                "type": "text",
+                "required": False,
+                "default": cls._DEFAULT_PORT,
+                "placeholder": "/dev/ttyUSB0",
+                "hint": "Device path for the USB-to-RS485 adapter, as seen by "
+                "your Ionemo base station (which runs Linux). /dev/ttyUSB0 is "
+                "the usual case with a single adapter attached -- if that "
+                "doesn't work, run `ls /dev/ttyUSB*` on the base station to "
+                "see what's actually there (`/dev/ttyACM0` is common for some "
+                "adapter chipsets), or check for more than one USB-serial "
+                "adapter, a udev symlink, or a container device-mapping rule.",
+            },
         ]
 
     # Baud rates to try during discovery (most common first)
@@ -151,8 +182,13 @@ class AuroraRS485Driver(PVInverterDriver):
 
     @classmethod
     def _open_serial(cls, serial_mod: Any, baud: int) -> Any | DiscoveryResult:
-        """Try to open the serial port; return a Serial object or a DiscoveryResult on failure."""
-        port = cls._PORT
+        """Try to open the serial port; return a Serial object or a DiscoveryResult on failure.
+
+        Discovery runs before any device is configured, so it can only ever try the
+        default port -- a user with an overridden port (see config_schema()'s "port"
+        field) will need to configure the device manually if discovery doesn't find it.
+        """
+        port = cls._DEFAULT_PORT
         try:
             return serial_mod.Serial(
                 port=port,
@@ -209,7 +245,13 @@ class AuroraRS485Driver(PVInverterDriver):
                     if any(d["address"] == address for d in found):
                         continue
                     if cls._probe_address(ser, address):
-                        found.append({"address": address, "baudrate": baud})
+                        found.append(
+                            {
+                                "address": address,
+                                "baudrate": baud,
+                                "port": cls._DEFAULT_PORT,
+                            }
+                        )
                         logger.info(
                             "Aurora discover: found inverter at address %d, baud %d",
                             address,
@@ -294,7 +336,7 @@ class AuroraRS485Driver(PVInverterDriver):
             if self._serial is None:
                 try:
                     self._serial = serial.Serial(
-                        port=self._PORT,
+                        port=self._port,
                         baudrate=self._baudrate,
                         bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
