@@ -2,6 +2,17 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.3.1 — 2026-09-04
+
+### Changed
+- Docs-only follow-up to 0.3.0: the host app's `docker-compose.yml` now grants its container
+  generic, identical access to any USB-serial device (a `/dev` bind-mount plus `device_cgroup_rules`
+  scoped to the `ttyUSB`/`ttyACM` device classes) instead of a per-installation
+  `docker-compose.override.yml` device mapping -- that per-installation file no longer exists.
+  Updated `aurora_rs485.py`'s docstring/setup guide/config hint text and
+  `docs/drivers/aurora_rs485.md` to describe the new reality: nothing to configure at the container
+  level, ever, on any installation. No functional/API change.
+
 ## 0.3.0 — 2026-09-04
 
 ### Changed

@@ -67,10 +67,12 @@ class AuroraRS485Driver(PVInverterDriver):
     # Default serial port when a device's config doesn't specify one (see
     # config_schema()'s "port" field). This is a Linux USB-serial enumeration
     # convention, not a fact about this inverter model -- the actual path
-    # depends entirely on that specific base station's own USB topology
-    # (how many other adapters are attached, and container device-mapping
-    # choices like docker-compose.override.yml's `devices:` list in the main
-    # app repo), so it must stay overridable rather than hardcoded.
+    # depends entirely on that specific base station's own USB topology (how
+    # many other adapters are attached), so it must stay overridable rather
+    # than hardcoded. The host app's own container has generic, identical
+    # access to any USB-serial device regardless of installation (see the
+    # main app repo's docker-compose.yml) -- nothing container-level to
+    # configure per device, only which specific path this field should be.
     _DEFAULT_PORT = "/dev/ttyUSB0"
     _DEFAULT_BAUDRATE = 19200
 
@@ -122,9 +124,9 @@ class AuroraRS485Driver(PVInverterDriver):
             "the base station and run `ls /dev/ttyUSB*` to see what's "
             "actually there (some adapter chipsets show up as `/dev/ttyACM0` "
             "instead), then enter that in the **Serial Port** field below. "
-            "Also override it if you have more than one USB-serial adapter, "
-            "or a udev symlink / container device-mapping rule pointing "
-            "somewhere else.\n\n"
+            "Also override it if you have more than one USB-serial adapter "
+            "and want to pick a specific one, or use a udev symlink for a "
+            "name that survives a reboot.\n\n"
             "\n### 3. Inverter Settings\n\n"
             "Using the inverter's front panel or Aurora Manager TL software:\n\n"
             "- **Baud Rate:** 19200 (factory default)\n"
@@ -172,7 +174,7 @@ class AuroraRS485Driver(PVInverterDriver):
                 "doesn't work, run `ls /dev/ttyUSB*` on the base station to "
                 "see what's actually there (`/dev/ttyACM0` is common for some "
                 "adapter chipsets), or check for more than one USB-serial "
-                "adapter, a udev symlink, or a container device-mapping rule.",
+                "adapter.",
             },
         ]
 

@@ -19,10 +19,10 @@
 | `port`     | text   |    No    | `/dev/ttyUSB0` | Device path *inside the container* for the USB-to-RS485 adapter    |
 
 `port` is a Linux USB-serial enumeration fact, not a property of this inverter model — it depends
-entirely on that specific base station's own USB topology (how many other adapters are attached,
-and any container device-mapping in `docker-compose.override.yml`), so it's a plain configurable
-field with a sane default, never hardcoded. See "Docker device passthrough" below for the
-recommended way to keep it stable across reboots.
+entirely on that specific base station's own USB topology (how many other adapters are attached),
+so it's a plain configurable field with a sane default, never hardcoded. The host app's own
+container already has generic access to any USB-serial device (see "Docker device passthrough"
+below) — nothing to configure at the container level, ever, per installation.
 
 ---
 
@@ -44,38 +44,22 @@ Use shielded twisted-pair cable for runs longer than 5 m. Terminate with 120 Ω 
 
 ### Docker device passthrough (Raspberry Pi)
 
-Pass the adapter straight through in `docker-compose.override.yml`, with no host-side setup:
+Nothing to set up — the host app's `docker-compose.yml` already bind-mounts `/dev` and grants the
+container `device_cgroup_rules` scoped to the `ttyUSB`/`ttyACM` device classes (kernel-fixed major
+numbers, not specific paths). This is identical across every base station, decided once, and never
+touched per-installation: no `docker-compose.override.yml`, no udev rule, no per-customer config at
+the Docker level, ever. Just plug the adapter in and it's visible inside the container immediately
+— no restart needed.
 
-```yaml
-services:
-  energy-optimizer:
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
-```
-
-That's it — this matches `port`'s `/dev/ttyUSB0` default, so the driver needs zero configuration
-for the common case (one USB-serial adapter attached). A base station shouldn't need to know in
-advance which specific device model is plugged in, so this is the recommended default for any
-deployment, not just a single-household one.
-
-**If you have more than one USB-serial adapter** and want a stable path that survives a reboot
-regardless of enumeration order, you can create your own udev rule matching the adapter's USB
-vendor/product ID (find them with `lsusb`) and pass that symlink through instead — then set this
-driver's **Serial Port** field to match. This is a per-installation choice you make for your own
-setup, not something a shipped base station image should carry pre-configured for one specific
-inverter brand:
-
-```bash
-# e.g. /etc/udev/rules.d/99-my-rs485-adapter.rules
-SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="my_adapter"
-```
-
-```yaml
-services:
-  energy-optimizer:
-    devices:
-      - /dev/my_adapter:/dev/my_adapter
-```
+**If you have more than one USB-serial adapter** on the same Pi, both are equally visible; use
+`ls /dev/ttyUSB*` (or `/dev/ttyACM*`) to see which is which and set this driver's **Serial Port**
+field to the correct one. Enumeration order (which physical adapter becomes `ttyUSB0` vs `ttyUSB1`)
+can shift across a reboot if you have more than one — if that matters for your setup, a udev rule
+giving your adapter a stable symlink is still a legitimate option (`SUBSYSTEM=="tty",
+ATTRS{idVendor}=="...", ATTRS{idProduct}=="...", SYMLINK+="..."`, find IDs with `lsusb`), and the
+symlink shows up under `/dev` the same way any other device does since the whole directory is
+bind-mounted — just set **Serial Port** to match. This is now purely about your own preference for
+a stable name, not something required to make the container see the device at all.
 
 ---
 
