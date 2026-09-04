@@ -540,6 +540,16 @@ class TestDiscover:
 
         assert "pyserial is not installed" in result.warnings[0]
 
+    def test_discover_quick_falls_back_to_discover_when_not_overridden(self) -> None:
+        """AuroraRS485Driver has nothing to ARP-pre-filter (RS-485/serial,
+        not IP-based) and correctly doesn't override discover_quick() --
+        confirms BaseDriver's default (call discover() unchanged) actually
+        kicks in for a real driver, not just in isolation against a mock."""
+        with patch.dict("sys.modules", {"serial": None}):
+            result = AuroraRS485Driver.discover_quick()
+
+        assert "pyserial is not installed" in result.warnings[0]
+
     def test_open_failure_returns_the_open_serial_warning_with_empty_devices(
         self,
     ) -> None:

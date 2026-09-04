@@ -283,6 +283,15 @@ class DaikinBrpDriver(ACUnitDriver):
         GET /common/basic_info. Daikin adapters respond with
         ret=OK,type=aircon,… when reachable.
         """
+        return cls._run_discovery(quick=False)
+
+    @classmethod
+    def discover_quick(cls) -> DiscoveryResult:
+        """Fast variant of discover() -- see BaseDriver.discover_quick()."""
+        return cls._run_discovery(quick=True)
+
+    @classmethod
+    def _run_discovery(cls, quick: bool) -> DiscoveryResult:
         from energy_optimizer_drivers.lan_scan import scan_subnet
 
         return scan_subnet(
@@ -294,6 +303,7 @@ class DaikinBrpDriver(ACUnitDriver):
             ),
             label="Daikin discovery",
             thread_name_prefix="daikin_disc",
+            quick=quick,
         )
 
     # ── Status ────────────────────────────────────────────────────────────────

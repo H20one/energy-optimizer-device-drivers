@@ -257,6 +257,9 @@ class BaseDriver(ABC):
             - warnings: list of user-facing messages explaining any issues.
 
         Contract:
+            - MUST take no arguments besides cls (enforced by
+              test_contract_compliance.py) -- see discover_quick() below for
+              the extension point that needs an alternate fast behavior.
             - MUST return a DiscoveryResult (never raise an exception).
             - MUST catch all internal exceptions and convert them to warnings.
             - warnings MUST be concise, non-technical, and actionable.
@@ -267,11 +270,36 @@ class BaseDriver(ABC):
             - If discovery completes but finds nothing, a warning like
               "No devices found on the network" helps the user understand
               that the scan worked but nothing responded.
-            - MUST NOT block for more than 30 seconds total.
+            - MUST NOT block longer than whatever ceiling the driver itself
+              documents (e.g. scan_subnet()'s own scan_timeout, currently
+              60s) -- there's no single fixed number across every driver.
 
         Default implementation returns an empty result (no discovery support).
         """
         return DiscoveryResult()
+
+    @classmethod
+    def discover_quick(cls) -> DiscoveryResult:
+        """Fast variant of discover(), for a wizard's default scan attempt.
+
+        Entirely optional and additive -- NOT part of discover()'s own
+        contract, which stays zero-argument (see above). The base
+        implementation here just calls discover() unchanged, so any driver
+        that doesn't override this still works correctly, only without the
+        speed benefit -- the app can always call discover_quick()
+        unconditionally, with no need to check whether a given driver
+        supports it first.
+
+        LAN-based drivers using energy_optimizer_drivers.lan_scan.scan_subnet()
+        should override this to forward quick=True to their own scan_subnet()
+        call (see grid/homewizard_p1.py, ac/daikin_brp.py for the pattern) --
+        a fast host-presence pre-filter runs before the slow per-address
+        probe, so a genuinely unused address is skipped entirely instead of
+        paying its full per-probe timeout. Drivers with nothing to
+        pre-filter (e.g. RS-485/serial bus addressing) simply don't override
+        this and get the same full scan either way.
+        """
+        return cls.discover()
 
     @classmethod
     def setup_guide(cls) -> str | None:

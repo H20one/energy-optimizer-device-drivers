@@ -2,6 +2,20 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.2.1 — 2026-09-04
+
+### Fixed
+- 0.2.0's design for exposing `scan_subnet()`'s new `quick` parameter through a driver's `discover()`
+  was never actually consumed by any caller, and would have broken `test_contract_compliance.py`'s
+  existing, deliberate `discover()` "takes no arguments" check the moment it was. Replaced with a
+  separate, optional `discover_quick()` classmethod instead: `discover()` itself is completely
+  unchanged (still zero-argument, contract intact), and `BaseDriver.discover_quick()`'s default
+  implementation just calls `discover()` unmodified, so any driver — including third-party ones —
+  that doesn't override it keeps working exactly as before, with no risk of breaking on an
+  unexpected keyword argument. `homewizard_p1` and `daikin_brp` override `discover_quick()` to
+  forward `quick=True` into their own `scan_subnet()` call; `aurora_rs485` and `alfen_eve` (nothing
+  to ARP-pre-filter) don't override it and are unaffected.
+
 ## 0.2.0 — 2026-09-04
 
 ### Added
