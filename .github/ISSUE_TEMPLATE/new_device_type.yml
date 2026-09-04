@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         A new `DeviceType` can't be added by a contributor alone — it needs matching support in the
-        main `energy-optimizer` app (a typed accessor, a scheduler job, a UI card) that doesn't exist
+        main `ionemo-app` (a typed accessor, a scheduler job, a UI card) that doesn't exist
         yet and doesn't live in this repo. See [ARCHITECTURE.md](../../ARCHITECTURE.md#changes-that-need-a-maintainer-not-just-a-pr)
         for why. Please describe the device below before writing any code.
   - type: input

@@ -33,7 +33,7 @@ Drivers must target one of the fixed device types defined in `DeviceType`:
 | `DeviceType.AC_UNIT`     | `ionemo_drivers/ac/`   | `ACUnitDriver`     |
 
 **Your device doesn't fit any of these four?** You can't add a new device type by yourself, even
-though `base.py` lives in this repo — the main `energy-optimizer` app has hand-written support
+though `base.py` lives in this repo — the main `ionemo-app` has hand-written support
 (a typed accessor, a scheduler job, a UI card) for each existing type that doesn't exist yet for a
 new one, and none of that lives here. See
 [ARCHITECTURE.md](ARCHITECTURE.md#changes-that-need-a-maintainer-not-just-a-pr) for the full list of
@@ -235,7 +235,7 @@ The app discovers it automatically at startup via `importlib.metadata.entry_poin
 
 - Only import from `ionemo_drivers.base`, `ionemo_drivers.registry`, and
   `ionemo_drivers.cert_store` (for HTTPS drivers)
-- **Never** import from `energy-optimizer`'s own `src/`, `config/`, or other driver modules — even
+- **Never** import from `ionemo-app`'s own `src/`, `config/`, or other driver modules — even
   though this is now a separate repo, the drivers package still ends up pip-installed into the same
   process as the main app in production, so this isn't just a style rule, it's a real boundary
 - External libraries (e.g. `requests`, `pyserial`) are fine — declare them in your package deps
@@ -260,7 +260,7 @@ deployment with a plain device passthrough, or a base station with more than one
 needs a different path, and a hardcoded constant gives them no way to fix it short of forking the
 driver. See `pv/aurora_rs485.py`'s `port` field (and its `_DEFAULT_PORT` docstring) for the pattern —
 found and fixed via a hygiene sweep after it turned out the "fixed" path only ever worked because of
-a matching remap in the `energy-optimizer` app repo's `docker-compose.override.yml`.
+a matching remap in the `ionemo-app` repo's `docker-compose.override.yml`.
 
 ### Discovery (optional)
 
@@ -372,16 +372,16 @@ def test_get_data_failure():
    ```
    git+https://github.com/H20one/ionemo-drivers.git@<branch-or-commit-sha>#egg=ionemo-drivers
    ```
-   in `requirements.txt` on `energy-optimizer`'s `acceptance` branch, redeploying, and confirming
+   in `requirements.txt` on `ionemo-app`'s `acceptance` branch, redeploying, and confirming
    discover()/get_data()/the setters behave correctly against the live device. That pin gets
    reverted to a released tag immediately after — it's a one-off validation step that stays on
-   `acceptance`, never something that reaches `energy-optimizer`'s `main` branch; see that repo's own
+   `acceptance`, never something that reaches `ionemo-app`'s `main` branch; see that repo's own
    `requirements.txt` rule ("never an unpinned branch, for reproducible builds") for why this is a
    temporary exception, not a contradiction of it. For a driver whose hardware the maintainer doesn't
    have, this step isn't possible; review then relies more on a careful read of the vendor's
    protocol docs and the contributor's own testing.
 5. Once merged, a builtin-style driver ships in the next tagged release of this package (see
-   [CHANGELOG.md](CHANGELOG.md)) — `energy-optimizer` picks it up when it bumps its pinned dependency
+   [CHANGELOG.md](CHANGELOG.md)) — `ionemo-app` picks it up when it bumps its pinned dependency
    version. An external (pip-installed, entry-point-based) driver is independent of this repo's
    release cycle entirely — it's discovered at runtime via `importlib.metadata.entry_points()`, so it
    ships whenever *you* publish your own package.

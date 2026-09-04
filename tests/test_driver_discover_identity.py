@@ -2,7 +2,7 @@
 
 Covers ionemo_drivers/grid/homewizard_p1.py's _probe_homewizard and
 ionemo_drivers/ac/daikin_brp.py's _probe_daikin — the two drivers
-that support device-reconnect-by-identity in the main energy-optimizer app.
+that support device-reconnect-by-identity in the main ionemo-app.
 All response shapes below are fabricated example data shaped to match each
 device's real response format, not captured from any real device.
 """
