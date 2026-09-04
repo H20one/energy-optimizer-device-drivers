@@ -29,7 +29,7 @@ def scan_subnet(
     label: str = "Discovery",
     thread_name_prefix: str = "discovery",
     max_workers: int = 15,
-    scan_timeout: float = 15.0,
+    scan_timeout: float = 45.0,
 ) -> DiscoveryResult:
     """Scan every address on the host's local /24 subnet, calling *probe(ip)*
     concurrently for each, and return a DiscoveryResult.
@@ -84,6 +84,21 @@ def scan_subnet(
     # before triggering any discover() call), but 15 concurrent connections
     # looks meaningfully less like an attack tool to network monitoring than
     # 50, at a barely-noticeable cost on a local, low-latency LAN.
+    #
+    # scan_timeout must be large enough for the whole /24 to actually get a
+    # turn: a non-responding address doesn't fail fast (no ARP reply means the
+    # connection attempt hangs, confirmed live -- ~2.5s each, the probe
+    # functions' own per-request timeout) rather than an instant refusal, so
+    # with max_workers=15 the full 253-address sweep needs up to
+    # ceil(253/15) x 2.5s =~ 42s in the worst case (most of a home LAN /24 is
+    # unused). The previous default (15s) only ever gave the first ~90
+    # addresses (numerically, the low end of the range) a chance to be probed
+    # -- a real device on a higher address (e.g. a DHCP lease well into the
+    # .150-.254 range) was silently never reached, not merely slow to find.
+    # Confirmed live against a real deployment: real, reachable devices that
+    # responded correctly and instantly to a direct probe were still reported
+    # as "not found" by discover(), because the scan gave up long before
+    # reaching their addresses.
     pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix=thread_name_prefix)
     try:
         futures = {pool.submit(probe, ip): ip for ip in ips}
