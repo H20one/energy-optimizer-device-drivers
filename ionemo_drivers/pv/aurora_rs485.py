@@ -12,7 +12,7 @@ import threading
 import time
 from typing import Any
 
-from energy_optimizer_drivers.base import (
+from ionemo_drivers.base import (
     ConfigField,
     ConnectionType,
     DeviceType,
@@ -20,7 +20,7 @@ from energy_optimizer_drivers.base import (
     PVInverterData,
     PVInverterDriver,
 )
-from energy_optimizer_drivers.registry import register_driver
+from ionemo_drivers.registry import register_driver
 
 logger = logging.getLogger(__name__)
 

@@ -15,9 +15,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from requests.exceptions import RequestException
 
-from energy_optimizer_drivers.base import DeviceType, EVChargerData
-from energy_optimizer_drivers.contract_validation import validate_contract_data
-from energy_optimizer_drivers.ev.alfen_eve import AlfenEveDriver
+from ionemo_drivers.base import DeviceType, EVChargerData
+from ionemo_drivers.contract_validation import validate_contract_data
+from ionemo_drivers.ev.alfen_eve import AlfenEveDriver
 
 # ---------------------------------------------------------------------------
 # Shared test data — reflects the real Alfen API response format
@@ -44,7 +44,7 @@ _MOCK_PROPS = {
 
 
 def _make_driver() -> AlfenEveDriver:
-    with patch("energy_optimizer_drivers.ev.alfen_eve.resolve_verify", return_value="/fake/cert.pem"):
+    with patch("ionemo_drivers.ev.alfen_eve.resolve_verify", return_value="/fake/cert.pem"):
         return AlfenEveDriver({"ip": _TEST_IP, "password": _TEST_PASSWORD})
 
 
@@ -59,8 +59,8 @@ def _get_data_with_mock_props(props: dict) -> EVChargerData | None:
     get_resp.json.return_value = props
 
     with (
-        patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-        patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+        patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+        patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
     ):
         mock_session = MagicMock()
         mock_cls.return_value = mock_session
@@ -169,8 +169,8 @@ class TestAlfenResponseParsing:
         failed_resp.status_code = 401
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session
@@ -184,7 +184,7 @@ class TestAlfenResponseParsing:
         """If the charger was unreachable at both construction and every retry,
         _login() must keep failing cleanly rather than proceeding with no cert."""
         with patch(
-            "energy_optimizer_drivers.ev.alfen_eve.resolve_verify", return_value=False
+            "ionemo_drivers.ev.alfen_eve.resolve_verify", return_value=False
         ):
             driver = AlfenEveDriver({"ip": _TEST_IP, "password": _TEST_PASSWORD})
             data = driver.get_data()
@@ -197,8 +197,8 @@ class TestAlfenResponseParsing:
         driver = _make_driver()
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session
@@ -368,8 +368,8 @@ class TestSetCurrent:
         ok_resp = MagicMock(status_code=200)
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session
@@ -383,8 +383,8 @@ class TestSetCurrent:
         failed_resp = MagicMock(status_code=401)
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session
@@ -409,8 +409,8 @@ class TestSetCurrent:
         write_ok = MagicMock(status_code=200)
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_cls.return_value = MagicMock()  # the re-login's new session
             # First post() on the pre-seeded session is the write attempt ->
@@ -434,8 +434,8 @@ class TestSetCurrent:
         relogin_failed = MagicMock(status_code=401)
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_cls.return_value = MagicMock()
             driver._session.post.side_effect = [expired]
@@ -488,8 +488,8 @@ class TestReadAllProperties:
         login_ok = MagicMock(status_code=200)
 
         with (
-            patch("energy_optimizer_drivers.ev.alfen_eve.requests.Session") as mock_cls,
-            patch("energy_optimizer_drivers.ev.alfen_eve.configure_session_tls"),
+            patch("ionemo_drivers.ev.alfen_eve.requests.Session") as mock_cls,
+            patch("ionemo_drivers.ev.alfen_eve.configure_session_tls"),
         ):
             mock_session = MagicMock()
             mock_cls.return_value = mock_session

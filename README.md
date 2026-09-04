@@ -23,8 +23,8 @@ your first driver. Participation in this project is governed by our
 ## Architecture
 
 ```
-energy-optimizer-device-drivers/
-├── energy_optimizer_drivers/    ← the installable package
+ionemo-drivers/
+├── ionemo_drivers/    ← the installable package
 │   ├── base.py              ← ABCs, TypedDicts, enums (the contract)
 │   ├── registry.py          ← Driver discovery and registration
 │   ├── cert_store.py        ← Shared TOFU TLS certificate pinning for HTTPS drivers
@@ -74,10 +74,10 @@ energy-optimizer-device-drivers/
 ```
 
 1. The main app's `requirements.txt` pins a released version of this package (e.g.
-   `git+https://github.com/H20one/energy-optimizer-device-drivers.git@v0.1.0`).
-2. `energy_optimizer_drivers.registry.load_all_drivers()` imports builtin driver modules (each calls
+   `git+https://github.com/H20one/ionemo-drivers.git@v0.1.0`).
+2. `ionemo_drivers.registry.load_all_drivers()` imports builtin driver modules (each calls
    `register_driver()` at import time) and discovers any externally pip-installed drivers via the
-   `energy_optimizer.drivers` entry point group.
+   `ionemo.drivers` entry point group.
 3. When a user configures a device via the UI, the app instantiates the driver with the user's
    config (encrypted at rest by the app — this package never sees the encryption layer).
 4. The app calls `get_data()` on a schedule to poll the device — every 5–10 seconds depending on
@@ -95,7 +95,7 @@ energy-optimizer-device-drivers/
 | EV Charger  | `DeviceType.EV_CHARGER`  | `EVChargerDriver`  | `EVChargerData`   | Read status + control current       |
 | AC Unit     | `DeviceType.AC_UNIT`     | `ACUnitDriver`     | `ACUnitData`      | Read status + control mode/temp/fan |
 
-Each type has a dedicated ABC in `energy_optimizer_drivers/base.py` and a full data contract doc in
+Each type has a dedicated ABC in `ionemo_drivers/base.py` and a full data contract doc in
 `docs/contracts/`. `battery` and `smart_socket` are commented-out placeholders in `DeviceType`, not
 real, buildable types yet.
 
@@ -132,7 +132,7 @@ Optional overrides (all classmethods): `discover()` (auto-detect devices), `disc
 
 ## Key Rules
 
-1. **Drivers ONLY import from `energy_optimizer_drivers.base`** — never from the main app's `src/`,
+1. **Drivers ONLY import from `ionemo_drivers.base`** — never from the main app's `src/`,
    `config/`, or other drivers. This isn't just style: this package ends up pip-installed into the
    same Python process as the main app in production, so it's a real boundary, not a folder
    convention.
@@ -182,11 +182,11 @@ correctly).
 
 ## How Drivers Are Loaded
 
-1. **Builtin drivers** — modules listed in `energy_optimizer_drivers/registry.py`'s
+1. **Builtin drivers** — modules listed in `ionemo_drivers/registry.py`'s
    `_load_builtin_drivers()` are imported at startup. Each module calls `register_driver()` at
    import time.
 2. **External drivers** (your own separate pip-installed package) — discovered via the
-   `energy_optimizer.drivers` entry point group. See
+   `ionemo.drivers` entry point group. See
    [CONTRIBUTING.md](CONTRIBUTING.md#step-6-for-external-pip-installed-drivers) for details.
 
 ---
@@ -201,6 +201,6 @@ correctly).
 | [docs/contracts/pv_inverter.md](docs/contracts/pv_inverter.md)  | PV inverter data contract                  |
 | [docs/contracts/ev_charger.md](docs/contracts/ev_charger.md)    | EV charger data contract                   |
 | [docs/contracts/ac_unit.md](docs/contracts/ac_unit.md)          | AC unit data contract                      |
-| [energy_optimizer_drivers/cert_store.py](energy_optimizer_drivers/cert_store.py) | TOFU TLS certificate pinning for HTTPS drivers with self-signed certs |
-| [energy_optimizer_drivers/base.py](energy_optimizer_drivers/base.py) | Source of truth — ABCs and TypedDicts      |
+| [ionemo_drivers/cert_store.py](ionemo_drivers/cert_store.py) | TOFU TLS certificate pinning for HTTPS drivers with self-signed certs |
+| [ionemo_drivers/base.py](ionemo_drivers/base.py) | Source of truth — ABCs and TypedDicts      |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                              | Why this is a separate repo, and exactly what is/isn't shared with the main app |

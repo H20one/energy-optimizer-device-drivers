@@ -2,6 +2,25 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.5.0 — 2026-09-04
+
+### Changed — BREAKING
+- Package renamed from `energy_optimizer_drivers` to `ionemo_drivers`, matching the product's actual
+  brand name (Ionemo) rather than the original repo's working title. **Every import site changes**:
+  `from energy_optimizer_drivers.pv.aurora_rs485 import AuroraRS485Driver` becomes
+  `from ionemo_drivers.pv.aurora_rs485 import AuroraRS485Driver`, and so on for every module. The
+  PyPI/dist name changes too: `energy-optimizer-device-drivers` -> `ionemo-drivers` (update both the
+  `git+https://...` URL and its `#egg=` fragment in any pin).
+- The third-party plugin entry-point group also renamed: `energy_optimizer.drivers` ->
+  `ionemo.drivers`. This is normally treated as a stability guarantee (see `ARCHITECTURE.md`'s
+  "Changes that need a maintainer" section, `TestEntryPointGroupName`) — renamed anyway, deliberately,
+  because no external driver package exists yet to break; this is the last moment the rename is free.
+  Anyone building an external driver package must update their `pyproject.toml`'s
+  `[project.entry-points."..."]` group name to match.
+- No behavior change to any driver's actual logic — this is a pure rename, verified by the full
+  existing test suite (371 tests) passing unchanged, plus a real `pip install .` + registry
+  load-and-discover smoke test post-rename.
+
 ## 0.4.0 — 2026-09-04
 
 ### Added

@@ -28,7 +28,7 @@ Returns `None` when the device is unreachable. Otherwise returns a dict with:
 
 **Enforcement:** the required/optional split above is marked in `base.py`'s `ACUnitData` via
 `Required[...]` and checkable at runtime with
-`energy_optimizer_drivers.contract_validation.validate_contract_data()` — see that module for what
+`ionemo_drivers.contract_validation.validate_contract_data()` — see that module for what
 it does and doesn't check.
 
 ---
@@ -60,7 +60,7 @@ real device capability or require lossy remapping in both directions. Instead:
   `get_data()` should always be accepted by `set_fan_speed()`).
 - The frontend renders whatever speed values a given driver reports, rather than assuming a fixed
   set of buttons.
-- **Reference implementation** (`energy_optimizer_drivers/ac/daikin_brp.py`): `"auto"`, `"silent"`, and the numeric
+- **Reference implementation** (`ionemo_drivers/ac/daikin_brp.py`): `"auto"`, `"silent"`, and the numeric
   steps `"1"` through `"5"`. This is what actually ships today — if you're building a second AC
   driver, match this vocabulary where your device has equivalent steps so the frontend's existing
   fan-speed UI works without changes, but don't invent values your device can't really do.

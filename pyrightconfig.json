@@ -1,5 +1,5 @@
 {
-  "include": ["energy_optimizer_drivers", "tests"],
+  "include": ["ionemo_drivers", "tests"],
   "exclude": ["venv", ".venv", "**/__pycache__"],
   "pythonVersion": "3.13",
   "typeCheckingMode": "standard",

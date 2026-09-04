@@ -8,7 +8,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from energy_optimizer_drivers.base import BaseDriver
+    from ionemo_drivers.base import BaseDriver
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,10 @@ DRIVER_REGISTRY: dict[str, type[BaseDriver]] = {}
 def _load_builtin_drivers() -> None:
     """Import all builtin driver modules to trigger registration."""
     builtin_modules = [
-        "energy_optimizer_drivers.grid.homewizard_p1",
-        "energy_optimizer_drivers.pv.aurora_rs485",
-        "energy_optimizer_drivers.ev.alfen_eve",
-        "energy_optimizer_drivers.ac.daikin_brp",
+        "ionemo_drivers.grid.homewizard_p1",
+        "ionemo_drivers.pv.aurora_rs485",
+        "ionemo_drivers.ev.alfen_eve",
+        "ionemo_drivers.ac.daikin_brp",
     ]
     for module_path in builtin_modules:
         try:
@@ -33,7 +33,7 @@ def _load_builtin_drivers() -> None:
 
 def _load_external_drivers() -> None:
     """Discover pip-installed driver plugins via entry points."""
-    discovered = entry_points(group="energy_optimizer.drivers")
+    discovered = entry_points(group="ionemo.drivers")
     for ep in discovered:
         try:
             driver_class = ep.load()
@@ -59,7 +59,7 @@ def get_drivers_for_type(device_type: str) -> dict[str, type[BaseDriver]]:
     Args:
         device_type: A DeviceType value (e.g. "grid_meter", "pv_inverter", "ev_charger").
     """
-    from energy_optimizer_drivers.base import (
+    from ionemo_drivers.base import (
         ACUnitDriver,
         DeviceType,
         EVChargerDriver,

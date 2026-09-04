@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeout
 from typing import Any
 
-from energy_optimizer_drivers.base import DiscoveryResult
+from ionemo_drivers.base import DiscoveryResult
 
 logger = logging.getLogger(__name__)
 

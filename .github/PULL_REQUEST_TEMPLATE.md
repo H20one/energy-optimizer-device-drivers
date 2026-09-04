@@ -15,7 +15,7 @@
       diff — test fixtures use fabricated data shaped to match the protocol, not a real capture
       (see [SECURITY.md](../SECURITY.md) §1.4)
 - [ ] Tests pass with mocked I/O — no real hardware/network/serial calls in tests
-- [ ] `basedpyright energy_optimizer_drivers/` reports 0 errors
+- [ ] `basedpyright ionemo_drivers/` reports 0 errors
 
 ## Does this PR add a new `DeviceType`, change an ABC signature in `base.py`, change
 `DRIVER_CALL_TIMEOUT`, or rename the entry-point group or top-level package?

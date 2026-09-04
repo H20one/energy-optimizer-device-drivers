@@ -30,7 +30,7 @@ Returns `None` when the device is unreachable or sleeping (e.g. at night with no
 
 **Enforcement:** the required/optional split above is marked in `base.py`'s `PVInverterData` via
 `Required[...]` and checkable at runtime with
-`energy_optimizer_drivers.contract_validation.validate_contract_data()` — see that module for what
+`ionemo_drivers.contract_validation.validate_contract_data()` — see that module for what
 it does and doesn't check.
 
 ---

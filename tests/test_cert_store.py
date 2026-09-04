@@ -1,4 +1,4 @@
-"""Tests for energy_optimizer_drivers/cert_store.py.
+"""Tests for ionemo_drivers/cert_store.py.
 
 Focused on _pinned_path()/resolve_verify()'s `prefix` parameter — this module
 is shared TOFU-pinning infrastructure for any HTTPS driver, and the pinned
@@ -14,7 +14,7 @@ from __future__ import annotations
 import ssl
 from unittest.mock import MagicMock, patch
 
-from energy_optimizer_drivers.cert_store import (
+from ionemo_drivers.cert_store import (
     _PinnedCertAdapter,
     _pin_cert,
     _pinned_path,
@@ -64,7 +64,7 @@ class TestResolveVerifyUsesThePrefixedPath:
     def test_falls_through_to_pinning_with_the_correct_prefixed_destination(
         self, tmp_path
     ) -> None:
-        with patch("energy_optimizer_drivers.cert_store._pin_cert") as mock_pin:
+        with patch("ionemo_drivers.cert_store._pin_cert") as mock_pin:
             mock_pin.return_value = str(tmp_path / "some_driver_192_0_2_10.pem")
             resolve_verify("192.0.2.10", "", tmp_path, timeout=2, prefix="some_driver")
 
@@ -76,7 +76,7 @@ class TestPinCert:
     def test_fetches_and_saves_the_certificate_on_success(self, tmp_path) -> None:
         dest = tmp_path / "device_192_0_2_10.pem"
         with patch(
-            "energy_optimizer_drivers.cert_store.ssl.get_server_certificate",
+            "ionemo_drivers.cert_store.ssl.get_server_certificate",
             return_value=_FAKE_PEM,
         ) as mock_fetch:
             result = _pin_cert("192.0.2.10", dest, timeout=5)
@@ -88,7 +88,7 @@ class TestPinCert:
     def test_creates_missing_parent_directories(self, tmp_path) -> None:
         dest = tmp_path / "nested" / "dir" / "device_192_0_2_10.pem"
         with patch(
-            "energy_optimizer_drivers.cert_store.ssl.get_server_certificate",
+            "ionemo_drivers.cert_store.ssl.get_server_certificate",
             return_value=_FAKE_PEM,
         ):
             _pin_cert("192.0.2.10", dest, timeout=5)
@@ -98,7 +98,7 @@ class TestPinCert:
     def test_returns_false_and_does_not_raise_when_unreachable(self, tmp_path, caplog) -> None:
         dest = tmp_path / "device_192_0_2_10.pem"
         with patch(
-            "energy_optimizer_drivers.cert_store.ssl.get_server_certificate",
+            "ionemo_drivers.cert_store.ssl.get_server_certificate",
             side_effect=OSError("connection refused"),
         ):
             result = _pin_cert("192.0.2.10", dest, timeout=5)
@@ -110,7 +110,7 @@ class TestPinCert:
         dest = tmp_path / "device_192_0_2_10.pem"
         with (
             patch(
-                "energy_optimizer_drivers.cert_store.ssl.get_server_certificate",
+                "ionemo_drivers.cert_store.ssl.get_server_certificate",
                 side_effect=OSError("connection refused"),
             ),
             caplog.at_level("WARNING"),
@@ -152,7 +152,7 @@ class TestPinnedCertAdapter:
     def test_init_poolmanager_injects_the_fingerprint(self) -> None:
         adapter = _PinnedCertAdapter("deadbeef")
         with patch(
-            "energy_optimizer_drivers.cert_store.HTTPAdapter.init_poolmanager"
+            "ionemo_drivers.cert_store.HTTPAdapter.init_poolmanager"
         ) as mock_super:
             adapter.init_poolmanager(10, 10)
 
@@ -162,7 +162,7 @@ class TestPinnedCertAdapter:
         adapter = _PinnedCertAdapter("deadbeef")
         request = MagicMock()
         with patch(
-            "energy_optimizer_drivers.cert_store.HTTPAdapter.send"
+            "ionemo_drivers.cert_store.HTTPAdapter.send"
         ) as mock_super:
             mock_super.return_value = "the-response"
             result = adapter.send(request)
@@ -174,7 +174,7 @@ class TestPinnedCertAdapter:
         adapter = _PinnedCertAdapter("deadbeef")
         request = MagicMock()
         with patch(
-            "energy_optimizer_drivers.cert_store.HTTPAdapter.send"
+            "ionemo_drivers.cert_store.HTTPAdapter.send"
         ) as mock_super:
             adapter.send(request, verify=True)
 

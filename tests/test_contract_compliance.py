@@ -11,7 +11,7 @@ from typing import get_type_hints
 
 import pytest
 
-from energy_optimizer_drivers.base import (
+from ionemo_drivers.base import (
     ACUnitDriver,
     BaseDriver,
     ConnectionType,
@@ -24,8 +24,8 @@ from energy_optimizer_drivers.base import (
     PVInverterData,
     PVInverterDriver,
 )
-from energy_optimizer_drivers.contract_validation import validate_contract_data
-from energy_optimizer_drivers.registry import DRIVER_REGISTRY, _load_builtin_drivers
+from ionemo_drivers.contract_validation import validate_contract_data
+from ionemo_drivers.registry import DRIVER_REGISTRY, _load_builtin_drivers
 
 # Ensure all builtin drivers are loaded before tests run
 _load_builtin_drivers()
@@ -424,6 +424,6 @@ class TestValidateContractData:
         """Every DeviceType must have a validator entry — new device types
         (a coordinated, maintainer-agreed change per ARCHITECTURE.md) must
         extend contract_validation._CONTRACT_BY_DEVICE_TYPE too."""
-        from energy_optimizer_drivers.contract_validation import _CONTRACT_BY_DEVICE_TYPE
+        from ionemo_drivers.contract_validation import _CONTRACT_BY_DEVICE_TYPE
 
         assert set(_CONTRACT_BY_DEVICE_TYPE) == set(DeviceType)

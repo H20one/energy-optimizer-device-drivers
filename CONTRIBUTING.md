@@ -27,10 +27,10 @@ Drivers must target one of the fixed device types defined in `DeviceType`:
 
 | Enum Value               | Folder          | ABC to subclass    |
 | ------------------------ | --------------- | ------------------ |
-| `DeviceType.GRID_METER`  | `energy_optimizer_drivers/grid/` | `GridMeterDriver`  |
-| `DeviceType.PV_INVERTER` | `energy_optimizer_drivers/pv/`   | `PVInverterDriver` |
-| `DeviceType.EV_CHARGER`  | `energy_optimizer_drivers/ev/`   | `EVChargerDriver`  |
-| `DeviceType.AC_UNIT`     | `energy_optimizer_drivers/ac/`   | `ACUnitDriver`     |
+| `DeviceType.GRID_METER`  | `ionemo_drivers/grid/` | `GridMeterDriver`  |
+| `DeviceType.PV_INVERTER` | `ionemo_drivers/pv/`   | `PVInverterDriver` |
+| `DeviceType.EV_CHARGER`  | `ionemo_drivers/ev/`   | `EVChargerDriver`  |
+| `DeviceType.AC_UNIT`     | `ionemo_drivers/ac/`   | `ACUnitDriver`     |
 
 **Your device doesn't fit any of these four?** You can't add a new device type by yourself, even
 though `base.py` lives in this repo — the main `energy-optimizer` app has hand-written support
@@ -65,7 +65,7 @@ These define:
 Create a new file in the appropriate folder:
 
 ```
-energy_optimizer_drivers/{type}/my_device.py
+ionemo_drivers/{type}/my_device.py
 ```
 
 Use a filename based on `{manufacturer}_{model}` in snake_case.
@@ -83,14 +83,14 @@ Brief description of the device and how it communicates.
 import logging
 from typing import Any
 
-from energy_optimizer_drivers.base import (
+from ionemo_drivers.base import (
     ConfigField,
     ConnectionType,
     DeviceType,
     GridMeterData,       # or PVInverterData, EVChargerData, ACUnitData
     GridMeterDriver,     # or PVInverterDriver, EVChargerDriver, ACUnitDriver
 )
-from energy_optimizer_drivers.registry import register_driver
+from ionemo_drivers.registry import register_driver
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ register_driver("manufacturer_model", MyDeviceDriver)
 
 **AC unit drivers** additionally implement three setters, not one — `set_mode(self, mode: str)`,
 `set_temperature(self, temp_c: float)`, `set_fan_speed(self, speed: str)`, all returning `bool`.
-See `energy_optimizer_drivers/ac/daikin_brp.py` for a real worked example (the only builtin driver with a
+See `ionemo_drivers/ac/daikin_brp.py` for a real worked example (the only builtin driver with a
 multi-setter interface today) and `docs/contracts/ac_unit.md` for the `mode` enum and a note on
 why `fan_speed` deliberately does NOT have a fixed cross-brand vocabulary.
 
@@ -175,15 +175,15 @@ why `fan_speed` deliberately does NOT have a fixed cross-brand vocabulary.
 
 ## Step 5: Register in the Registry (builtin drivers only)
 
-Add your module to the `builtin_modules` list in `energy_optimizer_drivers/registry.py`:
+Add your module to the `builtin_modules` list in `ionemo_drivers/registry.py`:
 
 ```python
 builtin_modules = [
-    "energy_optimizer_drivers.grid.homewizard_p1",
-    "energy_optimizer_drivers.pv.aurora_rs485",
-    "energy_optimizer_drivers.ev.alfen_eve",
-    "energy_optimizer_drivers.ac.daikin_brp",
-    "energy_optimizer_drivers.grid.my_device",       # ← add here
+    "ionemo_drivers.grid.homewizard_p1",
+    "ionemo_drivers.pv.aurora_rs485",
+    "ionemo_drivers.ev.alfen_eve",
+    "ionemo_drivers.ac.daikin_brp",
+    "ionemo_drivers.grid.my_device",       # ← add here
 ]
 ```
 
@@ -196,10 +196,10 @@ If your driver lives in a separate package, skip Step 5 and instead declare an e
 ```toml
 # pyproject.toml of your external driver package
 [project]
-name = "energy-optimizer-driver-mydevice"
-dependencies = ["energy-optimizer-device-drivers"]    # needs access to energy_optimizer_drivers.base
+name = "ionemo-driver-mydevice"
+dependencies = ["ionemo-drivers"]    # needs access to ionemo_drivers.base
 
-[project.entry-points."energy_optimizer.drivers"]
+[project.entry-points."ionemo.drivers"]
 manufacturer_model = "my_package.driver:MyDeviceDriver"
 ```
 
@@ -233,14 +233,14 @@ The app discovers it automatically at startup via `importlib.metadata.entry_poin
 
 ### Dependencies
 
-- Only import from `energy_optimizer_drivers.base`, `energy_optimizer_drivers.registry`, and
-  `energy_optimizer_drivers.cert_store` (for HTTPS drivers)
+- Only import from `ionemo_drivers.base`, `ionemo_drivers.registry`, and
+  `ionemo_drivers.cert_store` (for HTTPS drivers)
 - **Never** import from `energy-optimizer`'s own `src/`, `config/`, or other driver modules — even
   though this is now a separate repo, the drivers package still ends up pip-installed into the same
   process as the main app in production, so this isn't just a style rule, it's a real boundary
 - External libraries (e.g. `requests`, `pyserial`) are fine — declare them in your package deps
 - Lazy-import heavy/optional deps (e.g. `import serial` inside the method that needs it)
-- For HTTPS devices with self-signed certificates, use `energy_optimizer_drivers.cert_store.resolve_verify()` in `__init__` — do not implement your own TLS pinning or call `ssl.get_server_certificate()` directly
+- For HTTPS devices with self-signed certificates, use `ionemo_drivers.cert_store.resolve_verify()` in `__init__` — do not implement your own TLS pinning or call `ssl.get_server_certificate()` directly
 
 ### Config Schema
 
@@ -311,7 +311,7 @@ correct for the whole device family, not just the copy you own.
 
 ```python
 from unittest.mock import patch
-from energy_optimizer_drivers.grid.my_device import MyDeviceDriver
+from ionemo_drivers.grid.my_device import MyDeviceDriver
 
 def test_get_data_success():
     driver = MyDeviceDriver({"ip": "192.168.1.100"})
@@ -351,7 +351,7 @@ def test_get_data_failure():
 
 ## Submitting Your Driver
 
-1. **Fork this repo**, add your driver on a branch (`energy_optimizer_drivers/{type}/my_device.py`
+1. **Fork this repo**, add your driver on a branch (`ionemo_drivers/{type}/my_device.py`
    for a builtin-style addition — see Step 5 — or your own separate package for an external one, see
    Step 6), and open a pull request against `main`.
 2. **CI runs automatically** on every PR: `tests/test_contract_compliance.py` (structural checks —
@@ -370,7 +370,7 @@ def test_get_data_failure():
    real device — that only happens if the maintainer owns matching hardware, by temporarily pointing
    the main app's **ACC** deployment (never production) at the PR's branch or commit:
    ```
-   git+https://github.com/H20one/energy-optimizer-device-drivers.git@<branch-or-commit-sha>#egg=energy-optimizer-device-drivers
+   git+https://github.com/H20one/ionemo-drivers.git@<branch-or-commit-sha>#egg=ionemo-drivers
    ```
    in `requirements.txt` on `energy-optimizer`'s `acceptance` branch, redeploying, and confirming
    discover()/get_data()/the setters behave correctly against the live device. That pin gets

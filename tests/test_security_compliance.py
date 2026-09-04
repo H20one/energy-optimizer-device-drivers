@@ -15,13 +15,13 @@ from pathlib import Path
 
 import pytest
 
-from energy_optimizer_drivers.registry import _load_builtin_drivers
+from ionemo_drivers.registry import _load_builtin_drivers
 
 _load_builtin_drivers()
 
 _DRIVERS_ROOT = Path(__file__).parent.parent
 # Scan both the per-type driver implementations
-# (energy_optimizer_drivers/{grid,pv,ev,ac}/*.py) and the root-level shared
+# (ionemo_drivers/{grid,pv,ev,ac}/*.py) and the root-level shared
 # infrastructure (base.py, cert_store.py, registry.py) — cert_store.py does
 # the most security-sensitive TLS/filesystem work in the whole driver layer,
 # so it needs the same scrutiny as any individual driver.

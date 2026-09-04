@@ -1,4 +1,4 @@
-"""Tests for energy_optimizer_drivers/ac/daikin_brp.py — DaikinBrpDriver.
+"""Tests for ionemo_drivers/ac/daikin_brp.py — DaikinBrpDriver.
 
 Extracted from energy-optimizer's tests/test_ac.py (the app-route/scheduler tests stayed there;
 this class tests only the driver itself) as part of the drivers-repo split.
@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from energy_optimizer_drivers.base import DeviceType
-from energy_optimizer_drivers.contract_validation import validate_contract_data
+from ionemo_drivers.base import DeviceType
+from ionemo_drivers.contract_validation import validate_contract_data
 
 # ─── Test IP constants (RFC 5737 TEST-NET-1 — reserved for documentation/testing) ─
 _TEST_IP = "192.0.2.1"  # primary adapter under test
@@ -48,11 +48,11 @@ _SET_NG = "ret=PARAM NG"
 
 
 class TestDaikinBrpDriver:
-    """Unit tests for energy_optimizer_drivers/ac/daikin_brp.py."""
+    """Unit tests for ionemo_drivers/ac/daikin_brp.py."""
 
     @pytest.fixture
     def driver(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         return DaikinBrpDriver({"ip": _TEST_IP, "timeout": 2})
 
@@ -678,7 +678,7 @@ class TestDaikinBrpDriver:
     # ── _control_params_from_response ─────────────────────────────────────────
 
     def test_control_params_filters_to_writable_fields_only(self):
-        from energy_optimizer_drivers.ac.daikin_brp import _control_params_from_response
+        from ionemo_drivers.ac.daikin_brp import _control_params_from_response
 
         response = {
             "pow": "1",
@@ -703,7 +703,7 @@ class TestDaikinBrpDriver:
     # ── config_schema / setup_guide ───────────────────────────────────────────
 
     def test_config_schema_has_required_fields(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         schema = DaikinBrpDriver.config_schema()
         keys = [f["key"] for f in schema]
@@ -712,7 +712,7 @@ class TestDaikinBrpDriver:
         assert "timeout" in keys
 
     def test_setup_guide_returns_markdown(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         guide = DaikinBrpDriver.setup_guide()
         assert guide is not None
@@ -721,10 +721,10 @@ class TestDaikinBrpDriver:
     # ── discover ──────────────────────────────────────────────────────────────
 
     def test_discover_returns_found_device(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         with patch("socket.socket") as mock_sock_cls, patch(
-            "energy_optimizer_drivers.ac.daikin_brp._probe_daikin"
+            "ionemo_drivers.ac.daikin_brp._probe_daikin"
         ) as mock_probe:
 
             # Make getsockname return a local IP
@@ -741,10 +741,10 @@ class TestDaikinBrpDriver:
         assert result.devices[0]["ip"] == _TEST_IP
 
     def test_discover_no_adapters_returns_warning(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         with patch("socket.socket") as mock_sock_cls, patch(
-            "energy_optimizer_drivers.ac.daikin_brp._probe_daikin", return_value=None
+            "ionemo_drivers.ac.daikin_brp._probe_daikin", return_value=None
         ):
 
             mock_sock = MagicMock()
@@ -757,7 +757,7 @@ class TestDaikinBrpDriver:
         assert len(result.warnings) > 0
 
     def test_discover_socket_error_returns_warning(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         with patch("socket.socket") as mock_sock_cls:
             mock_sock = MagicMock()
@@ -770,19 +770,19 @@ class TestDaikinBrpDriver:
         assert len(result.warnings) > 0
 
     def test_discover_forwards_quick_false(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
         # scan_subnet is imported lazily inside _run_discovery(), so it must
         # be patched at its source module, not daikin_brp's namespace.
-        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+        with patch("ionemo_drivers.lan_scan.scan_subnet") as mock_scan:
             DaikinBrpDriver.discover()
 
         assert mock_scan.call_args.kwargs["quick"] is False
 
     def test_discover_quick_forwards_quick_true(self):
-        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+        from ionemo_drivers.ac.daikin_brp import DaikinBrpDriver
 
-        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+        with patch("ionemo_drivers.lan_scan.scan_subnet") as mock_scan:
             DaikinBrpDriver.discover_quick()
 
         assert mock_scan.call_args.kwargs["quick"] is True
@@ -790,7 +790,7 @@ class TestDaikinBrpDriver:
     # ── _probe_daikin ─────────────────────────────────────────────────────────
 
     def test_probe_daikin_returns_ip_on_match(self):
-        from energy_optimizer_drivers.ac.daikin_brp import _probe_daikin
+        from ionemo_drivers.ac.daikin_brp import _probe_daikin
 
         body = "ret=OK,type=aircon,reg=eu"
         with patch("requests.get", return_value=_make_response(body)):
@@ -799,7 +799,7 @@ class TestDaikinBrpDriver:
         assert result == {"ip": _TEST_IP}
 
     def test_probe_daikin_returns_none_for_non_aircon(self):
-        from energy_optimizer_drivers.ac.daikin_brp import _probe_daikin
+        from ionemo_drivers.ac.daikin_brp import _probe_daikin
 
         body = "ret=OK,type=heating"
         with patch("requests.get", return_value=_make_response(body)):
@@ -808,7 +808,7 @@ class TestDaikinBrpDriver:
         assert result is None
 
     def test_probe_daikin_returns_none_on_exception(self):
-        from energy_optimizer_drivers.ac.daikin_brp import _probe_daikin
+        from ionemo_drivers.ac.daikin_brp import _probe_daikin
 
         with patch("requests.get", side_effect=Exception("boom")):
             result = _probe_daikin(_TEST_IP)
