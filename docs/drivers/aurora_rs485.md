@@ -124,7 +124,9 @@ Aurora inverters shut down the RS-485 communication board at night (no standby p
 
 ## Discovery
 
-The driver scans RS-485 addresses 1–10 sequentially using the 19200-baud default, then retries with other common baud rates (9600, 38400, 57600, 115200) if nothing responds. A valid response is determined by a correct CRC-16 checksum — the response byte 0 is the inverter's alarm state, not an address echo. Discovery is limited to addresses 1–10 to complete within a reasonable time (~30 s maximum).
+`discover()` tries a small set of candidate serial ports in order (`_PROBE_PORTS`: `/dev/ttyUSB0`–`/dev/ttyUSB3`, then `/dev/ttyACM0`), covering the common single-adapter case plus a second/third adapter and the device class some chipsets enumerate under instead of `ttyUSB`. A candidate that doesn't exist fails instantly and costs virtually nothing to skip; discovery stops at the first candidate that actually yields an inverter, since a customer's bus is wired to exactly one adapter.
+
+For whichever port turns out to exist, the driver scans RS-485 addresses 1–10 sequentially using the 19200-baud default, then retries with other common baud rates (9600, 38400, 57600, 115200) if nothing responds. A valid response is determined by a correct CRC-16 checksum — the response byte 0 is the inverter's alarm state, not an address echo. Discovery is limited to addresses 1–10 to complete within a reasonable time.
 
 ---
 
