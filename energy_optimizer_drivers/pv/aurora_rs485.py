@@ -187,19 +187,25 @@ class AuroraRS485Driver(PVInverterDriver):
     _PROBE_TIMEOUT = 0.3
 
     # Serial ports probed during discover(), in order. Covers the common
-    # single-adapter case first (matching _DEFAULT_PORT), a small range for a
-    # second/third adapter, and the ttyACM device class some USB-serial
-    # chipsets enumerate under instead of ttyUSB. A candidate that doesn't
-    # exist fails instantly (no per-baud-rate wait), so scanning the extra
-    # entries costs virtually nothing when only one real adapter is attached
-    # -- discover() also stops at the first candidate that yields a result,
-    # since a customer's inverter bus is wired to exactly one adapter.
+    # single-adapter case first (matching _DEFAULT_PORT), then a small range
+    # for a second/third adapter on BOTH device classes an adapter chipset
+    # might enumerate under (ttyUSB -- vendor-specific USB-serial chips like
+    # FTDI/CH340/PL2303/CP210x -- and ttyACM -- the USB-IF's standard CDC-ACM
+    # class). No reason to give one class more slots than the other: a
+    # candidate that doesn't exist fails instantly (no per-baud-rate wait),
+    # so scanning the full range costs virtually nothing when only one real
+    # adapter is attached -- discover() also stops at the first candidate
+    # that yields a result, since a customer's inverter bus is wired to
+    # exactly one adapter.
     _PROBE_PORTS = [
         _DEFAULT_PORT,
         "/dev/ttyUSB1",
         "/dev/ttyUSB2",
         "/dev/ttyUSB3",
         "/dev/ttyACM0",
+        "/dev/ttyACM1",
+        "/dev/ttyACM2",
+        "/dev/ttyACM3",
     ]
 
     @classmethod
