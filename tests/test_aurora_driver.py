@@ -485,7 +485,7 @@ class TestSetupGuideAndConfigSchema:
         schema = AuroraRS485Driver.config_schema()
         keys = {field["key"]: field for field in schema}
         assert keys["port"]["required"] is False
-        assert keys["port"]["default"] == "/dev/ttyUSB0"
+        assert keys["port"].get("default") == "/dev/ttyUSB0"
 
 
 class TestAuroraConfigurablePort:
