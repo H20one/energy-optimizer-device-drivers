@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from energy_optimizer_drivers.base import DeviceType
+from energy_optimizer_drivers.base import DeviceType, DiscoveryResult
 from energy_optimizer_drivers.contract_validation import validate_contract_data
 from energy_optimizer_drivers.pv.aurora_rs485 import AuroraRS485Driver, _crc16
 
@@ -34,6 +34,23 @@ def _make_serial_mock(response: bytes) -> MagicMock:
     mock_serial = MagicMock()
     mock_serial.timeout = 1
     mock_serial.read.return_value = response
+    return mock_serial
+
+
+def _make_serial_mock_single_match() -> MagicMock:
+    """Build a mock serial port where only the very first read() call returns
+    a valid Aurora response -- every later call (any address/baud) returns a
+    CRC-mismatching one. A constant response would match every probed
+    address, since _probe_address() doesn't check that the response echoes
+    back the requested address (see Bug G in this file's module docstring)."""
+    import itertools
+
+    good_response = _build_response(struct.pack(">f", 1.0))
+    bad_response = bytes([0, 0, 0, 0, 0, 0, 0xFF, 0xFF])
+    mock_serial = _make_serial_mock(bad_response)
+    mock_serial.read.side_effect = itertools.chain(
+        [good_response], itertools.repeat(bad_response)
+    )
     return mock_serial
 
 
@@ -511,34 +528,38 @@ class TestOpenSerial:
         mock_serial_mod = MagicMock()
         mock_serial_mod.Serial.side_effect = PermissionError("in use")
 
-        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, "/dev/ttyUSB0", 19200)
 
-        assert result.warnings == [
-            "Serial port is busy — the inverter may already be configured."
-        ]
+        assert isinstance(result, DiscoveryResult)
+        assert "/dev/ttyUSB0" in result.warnings[0]
+        assert "busy" in result.warnings[0]
 
-    def test_file_not_found_reports_no_adapter(self) -> None:
+    def test_file_not_found_returns_none_not_a_discovery_result(self) -> None:
+        """None (not a DiscoveryResult) is the signal discover() uses to try
+        the next candidate port silently -- a missing device at one of
+        several possible paths isn't a real error worth its own warning."""
         mock_serial_mod = MagicMock()
         mock_serial_mod.Serial.side_effect = FileNotFoundError("no such device")
 
-        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, "/dev/ttyUSB0", 19200)
 
-        assert "No USB-to-RS485 adapter detected" in result.warnings[0]
+        assert result is None
 
     def test_other_exception_reports_a_generic_connection_problem(self) -> None:
         mock_serial_mod = MagicMock()
         mock_serial_mod.Serial.side_effect = RuntimeError("weird OS-level failure")
 
-        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, "/dev/ttyUSB0", 19200)
 
-        assert "Check the USB-to-RS485 adapter connection" in result.warnings[0]
+        assert isinstance(result, DiscoveryResult)
+        assert "/dev/ttyUSB0" in result.warnings[0]
 
     def test_success_returns_the_serial_object_not_a_discovery_result(self) -> None:
         mock_serial_mod = MagicMock()
         opened = MagicMock()
         mock_serial_mod.Serial.return_value = opened
 
-        result = AuroraRS485Driver._open_serial(mock_serial_mod, 19200)
+        result = AuroraRS485Driver._open_serial(mock_serial_mod, "/dev/ttyUSB0", 19200)
 
         assert result is opened
 
@@ -626,3 +647,88 @@ class TestDiscover:
 
         assert result.devices == []
         assert "No inverters responded" in result.warnings[0]
+
+    # ── Multi-port scanning: a customer's adapter isn't guaranteed to land on
+    #    the first candidate path, so discover() has to try several ────────
+
+    def test_tries_the_next_candidate_port_when_the_first_is_missing(self) -> None:
+        matching_mock = _make_serial_mock_single_match()
+
+        def serial_side_effect(*args: object, **kwargs: object) -> MagicMock:
+            if kwargs["port"] == "/dev/ttyUSB0":
+                raise FileNotFoundError("no such device")
+            return matching_mock
+
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = serial_side_effect
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == [
+            {"address": 1, "baudrate": 19200, "port": "/dev/ttyUSB1"}
+        ]
+
+    def test_falls_back_to_ttyacm_when_no_ttyusb_path_exists(self) -> None:
+        matching_mock = _make_serial_mock_single_match()
+
+        def serial_side_effect(*args: object, **kwargs: object) -> MagicMock:
+            if kwargs["port"] == "/dev/ttyACM0":
+                return matching_mock
+            raise FileNotFoundError("no such device")
+
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = serial_side_effect
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == [
+            {"address": 1, "baudrate": 19200, "port": "/dev/ttyACM0"}
+        ]
+
+    def test_stops_at_the_first_successful_port_without_trying_later_candidates(
+        self,
+    ) -> None:
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.return_value = _make_serial_mock_single_match()
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            AuroraRS485Driver.discover()
+
+        ports_tried = {c.kwargs["port"] for c in mock_serial_mod.Serial.call_args_list}
+        assert ports_tried == {AuroraRS485Driver._DEFAULT_PORT}
+
+    def test_busy_port_falls_back_to_the_next_candidate(self) -> None:
+        matching_mock = _make_serial_mock_single_match()
+
+        def serial_side_effect(*args: object, **kwargs: object) -> MagicMock:
+            if kwargs["port"] == "/dev/ttyUSB0":
+                raise PermissionError("in use")
+            return matching_mock
+
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.side_effect = serial_side_effect
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert result.devices == [
+            {"address": 1, "baudrate": 19200, "port": "/dev/ttyUSB1"}
+        ]
+
+    def test_a_port_that_opened_but_found_nothing_gives_a_specific_warning(
+        self,
+    ) -> None:
+        """If one candidate genuinely exists (opens fine) but no inverter
+        responds, that's a stronger, more actionable signal than "no adapter
+        found at all" -- worth naming which port it was."""
+        no_response = bytes()
+        mock_serial_mod = MagicMock()
+        mock_serial_mod.Serial.return_value = _make_serial_mock(no_response)
+
+        with patch.dict("sys.modules", {"serial": mock_serial_mod}):
+            result = AuroraRS485Driver.discover()
+
+        assert "No inverters responded on" in result.warnings[0]
+        assert "/dev/tty" in result.warnings[0]

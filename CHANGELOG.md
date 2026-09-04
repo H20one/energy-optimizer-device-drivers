@@ -2,6 +2,20 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.4.0 — 2026-09-04
+
+### Added
+- `aurora_rs485.py`'s `discover()` now scans a small set of common serial ports
+  (`/dev/ttyUSB0`-`/dev/ttyUSB3`, then `/dev/ttyACM0`) instead of only the default
+  `/dev/ttyUSB0`, stopping at the first candidate that yields an inverter. Combined with the host
+  app's now-generic device passthrough (0.3.0/0.3.1), this makes RS-485 setup genuinely plug-and-play
+  for the common cases it previously missed: a second/third adapter present, or a chipset that
+  enumerates under `ttyACM` instead of `ttyUSB`. A candidate that doesn't exist fails instantly
+  (no per-baud-rate wait), so the extra scanning costs virtually nothing when only one real adapter
+  is attached. `_open_serial()`'s signature and return contract changed (`port` param added; a
+  missing path now returns `None` instead of a `DiscoveryResult`, so callers can silently try the
+  next candidate) -- internal to this driver, no config_schema()/contract change.
+
 ## 0.3.1 — 2026-09-04
 
 ### Changed

@@ -134,9 +134,13 @@ class AuroraRS485Driver(PVInverterDriver):
             "- **Stop bits:** 1\n"
             "- **Address:** 1\u201332 (each inverter on the bus needs a unique address)\n\n"
             "\n### 4. Automatic Detection\n\n"
-            "Once wired, Ionemo automatically scans the RS-485 bus "
-            "(addresses 1\u201310) and detects your inverter. No manual configuration "
-            "is needed in most cases \u2014 just confirm the discovered device.\n"
+            "Once wired, Ionemo automatically scans a handful of common serial "
+            "ports (including the ttyACM device class some adapter chipsets use) "
+            "and, on whichever one your adapter is actually on, the RS-485 bus "
+            "(addresses 1\u201310) for your inverter. No manual configuration is "
+            "needed in most cases \u2014 just confirm the discovered device. The "
+            "**Serial Port** field below is only for the rare case discovery "
+            "doesn't find it (e.g. more than one adapter attached).\n"
         )
 
     @classmethod
@@ -182,15 +186,39 @@ class AuroraRS485Driver(PVInverterDriver):
     _PROBE_BAUDRATES = [19200, 9600, 38400, 57600, 115200]
     _PROBE_TIMEOUT = 0.3
 
-    @classmethod
-    def _open_serial(cls, serial_mod: Any, baud: int) -> Any | DiscoveryResult:
-        """Try to open the serial port; return a Serial object or a DiscoveryResult on failure.
+    # Serial ports probed during discover(), in order. Covers the common
+    # single-adapter case first (matching _DEFAULT_PORT), then a small range
+    # for a second/third adapter on BOTH device classes an adapter chipset
+    # might enumerate under (ttyUSB -- vendor-specific USB-serial chips like
+    # FTDI/CH340/PL2303/CP210x -- and ttyACM -- the USB-IF's standard CDC-ACM
+    # class). No reason to give one class more slots than the other: a
+    # candidate that doesn't exist fails instantly (no per-baud-rate wait),
+    # so scanning the full range costs virtually nothing when only one real
+    # adapter is attached -- discover() also stops at the first candidate
+    # that yields a result, since a customer's inverter bus is wired to
+    # exactly one adapter.
+    _PROBE_PORTS = [
+        _DEFAULT_PORT,
+        "/dev/ttyUSB1",
+        "/dev/ttyUSB2",
+        "/dev/ttyUSB3",
+        "/dev/ttyACM0",
+        "/dev/ttyACM1",
+        "/dev/ttyACM2",
+        "/dev/ttyACM3",
+    ]
 
-        Discovery runs before any device is configured, so it can only ever try the
-        default port -- a user with an overridden port (see config_schema()'s "port"
-        field) will need to configure the device manually if discovery doesn't find it.
+    @classmethod
+    def _open_serial(cls, serial_mod: Any, port: str, baud: int) -> Any | DiscoveryResult | None:
+        """Try to open the given serial port.
+
+        Returns the opened Serial object on success; None if nothing exists at
+        this specific path -- the expected outcome for most _PROBE_PORTS
+        entries on a typical single-adapter setup, so callers should just try
+        the next candidate rather than treat it as an error; or a
+        DiscoveryResult describing a real problem (busy port, unexpected
+        error) worth surfacing if no candidate ultimately succeeds.
         """
-        port = cls._DEFAULT_PORT
         try:
             return serial_mod.Serial(
                 port=port,
@@ -200,31 +228,25 @@ class AuroraRS485Driver(PVInverterDriver):
                 stopbits=serial_mod.STOPBITS_ONE,
                 timeout=cls._PROBE_TIMEOUT,
             )
+        except FileNotFoundError:
+            return None
         except PermissionError:
             return DiscoveryResult(
-                warnings=[
-                    "Serial port is busy — the inverter may already be configured."
-                ],
-            )
-        except FileNotFoundError:
-            return DiscoveryResult(
-                warnings=[
-                    "No USB-to-RS485 adapter detected. Make sure it is plugged into your Ionemo base."
-                ]
+                warnings=[f"{port} is busy — a device may already be using it."],
             )
         except Exception as e:
             logger.debug("Aurora discover: cannot open %s: %s", port, e)
             return DiscoveryResult(
-                warnings=[
-                    f"Cannot open serial port {port}. Check the USB-to-RS485 adapter connection."
-                ]
+                warnings=[f"Cannot open serial port {port}. Check the USB-to-RS485 adapter connection."]
             )
 
     @classmethod
     def discover(cls) -> DiscoveryResult:
-        """Probe the RS-485 bus for Aurora inverters.
+        """Probe for Aurora inverters across a small set of common serial ports.
 
-        Tries all common baud rates (starting with 19200) and addresses 1–10.
+        For each candidate in _PROBE_PORTS that actually exists, tries all
+        common baud rates and RS-485 addresses 1-10. Stops at the first
+        candidate that yields any inverter.
         """
         try:
             import serial as serial_mod
@@ -233,44 +255,63 @@ class AuroraRS485Driver(PVInverterDriver):
                 warnings=["pyserial is not installed — RS-485 not available."]
             )
 
-        found: list[dict[str, Any]] = []
+        # The most useful warning to show if nothing is ultimately found --
+        # "a port opened but nothing answered" always wins over "a port was
+        # busy" or "no port existed at all", since it's the strongest signal
+        # that real hardware is actually there. See the loop below for how
+        # this gets set/overwritten.
+        fallback_warning: str | None = None
 
-        for baud in cls._PROBE_BAUDRATES:
-            result = cls._open_serial(serial_mod, baud)
-            if isinstance(result, DiscoveryResult):
-                result.devices = found
-                return result
-            ser = result
+        for port in cls._PROBE_PORTS:
+            found: list[dict[str, Any]] = []
+            port_opened = False
 
-            try:
-                for address in range(1, 11):
-                    if any(d["address"] == address for d in found):
-                        continue
-                    if cls._probe_address(ser, address):
-                        found.append(
-                            {
-                                "address": address,
-                                "baudrate": baud,
-                                "port": cls._DEFAULT_PORT,
-                            }
-                        )
-                        logger.info(
-                            "Aurora discover: found inverter at address %d, baud %d",
-                            address,
-                            baud,
-                        )
-            finally:
-                ser.close()
+            for baud in cls._PROBE_BAUDRATES:
+                result = cls._open_serial(serial_mod, port, baud)
+                if result is None:
+                    # Nothing at this path -- true for every baud rate on the
+                    # same path, so there's no point retrying the rest.
+                    break
+                if isinstance(result, DiscoveryResult):
+                    if fallback_warning is None:
+                        fallback_warning = result.warnings[0]
+                    break
+                port_opened = True
+                ser = result
+                try:
+                    for address in range(1, 11):
+                        if any(d["address"] == address for d in found):
+                            continue
+                        if cls._probe_address(ser, address):
+                            found.append(
+                                {"address": address, "baudrate": baud, "port": port}
+                            )
+                            logger.info(
+                                "Aurora discover: found inverter at %s, address %d, baud %d",
+                                port,
+                                address,
+                                baud,
+                            )
+                finally:
+                    ser.close()
 
-        if not found:
-            return DiscoveryResult(
-                warnings=[
-                    "No inverters responded on the RS-485 bus (probed addresses 1\u201310)."
-                    + " Check the cable connection between the adapter and the inverter."
-                ]
-            )
+            if found:
+                return DiscoveryResult(devices=found)
 
-        return DiscoveryResult(devices=found)
+            if port_opened:
+                fallback_warning = (
+                    f"No inverters responded on {port} (probed addresses 1\u201310)."
+                    " Check the cable connection between the adapter and the inverter."
+                )
+
+        if fallback_warning:
+            return DiscoveryResult(warnings=[fallback_warning])
+
+        return DiscoveryResult(
+            warnings=[
+                "No USB-to-RS485 adapter detected. Make sure it is plugged into your Ionemo base."
+            ]
+        )
 
     @classmethod
     def _probe_address(cls, ser: Any, address: int) -> bool:
