@@ -2,6 +2,20 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.2.2 — 2026-09-04
+
+### Fixed
+- Documentation drift caught after shipping `discover_quick()` in 0.2.1: `docs/contracts/*.md` (all
+  four device types), `SECURITY.md`, and `.github/agents/driver-reviewer.agent.md`'s own review
+  checklist all still said discovery "must not block for more than 30 seconds" — stale since
+  `scan_subnet()`'s `scan_timeout` changed twice earlier the same day (45s, then 60s) without any of
+  these catching up. Reworded to reference `scan_subnet()`'s own docstring as the authoritative
+  current number instead of repeating a figure that's already drifted once and could again.
+- `discover_quick()` itself was undocumented outside of `base.py`'s own docstring — added to all
+  four `docs/contracts/*.md` files, `README.md`'s "optional overrides" list, and `CONTRIBUTING.md`'s
+  driver-writing guide, so an outside contributor writing a new LAN-based driver can actually find
+  this extension point.
+
 ## 0.2.1 — 2026-09-04
 
 ### Fixed

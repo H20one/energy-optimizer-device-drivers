@@ -122,7 +122,7 @@ one instance of it.
 
 ### 2.3 Network Timeouts
 
-- All network operations MUST have explicit timeouts (≤ 15 seconds for `get_data()`, ≤ 30 seconds for `discover()`).
+- All network operations MUST have explicit timeouts (≤ 15 seconds for `get_data()`; `discover()` MUST NOT block indefinitely — LAN-based drivers using `lan_scan.scan_subnet()` inherit its own documented ceiling, currently 60s; see that function's docstring for the authoritative current number, since it has changed before).
 - Drivers MUST NOT use infinite timeouts or blocking calls without a timeout parameter.
 
 ---

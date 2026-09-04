@@ -50,7 +50,14 @@ For every driver file you review, check ALL of the following:
 - [ ] `discover()` returns `DiscoveryResult` (not `list`)
 - [ ] Never raises exceptions — all errors converted to warnings
 - [ ] Warnings are user-facing, concise, non-technical, actionable
-- [ ] Does not block for more than 30 seconds
+- [ ] Does not block indefinitely — LAN-based drivers using `scan_subnet()` inherit its own
+      documented ceiling (currently 60s); a driver with its own scan loop applies a similarly
+      bounded timeout. Don't flag a PR for a specific number here — check it references a real
+      bound, not the literal "30 seconds" this checklist used to say before `scan_subnet()`'s own
+      ceiling changed (twice) without every doc catching up. That drift is exactly why this note
+      exists.
+- [ ] If it overrides `discover_quick()`, confirm it forwards `quick=True` into `scan_subnet()`
+      correctly (not just duplicating `discover()`'s body) — optional, not required
 - [ ] Returned config dicts match `config_schema()` keys
 
 ### Data Contract

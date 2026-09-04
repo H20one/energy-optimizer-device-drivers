@@ -261,6 +261,13 @@ constant and use it directly in `get_data()`.
 - Override `discover()` if the device supports network scanning (mDNS, HTTP, etc.)
 - Return a list of pre-filled config dicts that the user can pick from
 - Serial/RS-485 devices typically can't be discovered — leave the default `[]`
+- If your driver is LAN-based and uses the shared `lan_scan.scan_subnet()` helper, also override
+  `discover_quick()` to forward `quick=True` into your own `scan_subnet()` call — a fast
+  host-presence pre-filter then runs before the slow per-address probe, so most of a home network
+  (genuinely unused addresses) gets skipped entirely instead of paying its full per-address
+  timeout. This is purely additive: `BaseDriver`'s default `discover_quick()` just calls
+  `discover()` unchanged, so skipping this override is fine too — see `grid/homewizard_p1.py` or
+  `ac/daikin_brp.py` for the pattern if you do want it.
 
 ### Setup Guide (optional)
 

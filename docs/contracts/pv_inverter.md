@@ -81,8 +81,14 @@ Drivers that support auto-detection override the `discover()` classmethod. The a
 4. If the hardware is unavailable (e.g. no USB adapter), return an empty result with a warning explaining why.
 5. If the serial port is busy, warn that the device may already be configured.
 6. If discovery completes but finds nothing, include a warning so the user knows the scan ran successfully but nothing responded.
-7. **Must not block for more than 30 seconds** total.
+7. **Must not block indefinitely.** LAN-based drivers using `lan_scan.scan_subnet()` inherit its own documented ceiling (currently 60s — see that function's own docstring for the authoritative, current number, since it has changed before). A driver with its own scan loop (like `aurora_rs485.py`'s RS-485 bus sweep) should apply a similarly bounded timeout.
 8. Each dict in `devices` must contain keys that match the driver's `config_schema()` — the app passes them directly to `__init__(config)`.
+
+### Quick mode (optional) — `discover_quick() → DiscoveryResult`
+
+An optional, additive extension point — **not** part of `discover()`'s own contract above, which is unaffected either way. `BaseDriver.discover_quick()`'s default implementation just calls `discover()` unchanged, so a driver that doesn't override it keeps working exactly as before — the app calls `discover_quick()` unconditionally on every driver, no capability check needed.
+
+LAN-based drivers using `scan_subnet()` should override this to forward `quick=True` into their own `scan_subnet()` call: a fast host-presence pre-filter runs first (nudges ARP resolution, then checks which addresses actually have a live host), so a genuinely unused address is skipped entirely instead of paying its full per-address probe timeout. `aurora_rs485.py` (RS-485/serial, no IP addressing) has nothing to pre-filter and correctly doesn't override this.
 
 ### Example
 

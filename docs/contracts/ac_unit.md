@@ -119,7 +119,13 @@ Drivers that support auto-detection override the `discover()` classmethod.
 1. **Must return a `DiscoveryResult`** — never raise an exception.
 2. **Catch all internal exceptions** and convert them to warnings.
 3. Warnings must be **concise, non-technical, and actionable**.
-4. **Must not block for more than 30 seconds** total.
+4. **Must not block indefinitely.** LAN-based drivers using `lan_scan.scan_subnet()` inherit its own documented ceiling (currently 60s — see that function's own docstring for the authoritative, current number, since it has changed before). A driver with its own scan loop should apply a similarly bounded timeout.
+
+### Quick mode (optional) — `discover_quick() → DiscoveryResult`
+
+An optional, additive extension point — **not** part of `discover()`'s own contract above, which is unaffected either way. `BaseDriver.discover_quick()`'s default implementation just calls `discover()` unchanged, so a driver that doesn't override it keeps working exactly as before — the app calls `discover_quick()` unconditionally on every driver, no capability check needed.
+
+LAN-based drivers using `scan_subnet()` should override this to forward `quick=True` into their own `scan_subnet()` call: a fast host-presence pre-filter runs first (nudges ARP resolution, then checks which addresses actually have a live host), so a genuinely unused address is skipped entirely instead of paying its full per-address probe timeout. See `ac/daikin_brp.py` for the pattern. Drivers with nothing to pre-filter (serial/bus addressing) simply don't override this.
 
 ---
 
