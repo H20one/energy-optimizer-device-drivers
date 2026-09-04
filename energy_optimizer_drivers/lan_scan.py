@@ -29,7 +29,7 @@ def scan_subnet(
     label: str = "Discovery",
     thread_name_prefix: str = "discovery",
     max_workers: int = 15,
-    scan_timeout: float = 45.0,
+    scan_timeout: float = 60.0,
 ) -> DiscoveryResult:
     """Scan every address on the host's local /24 subnet, calling *probe(ip)*
     concurrently for each, and return a DiscoveryResult.
@@ -91,7 +91,13 @@ def scan_subnet(
     # functions' own per-request timeout) rather than an instant refusal, so
     # with max_workers=15 the full 253-address sweep needs up to
     # ceil(253/15) x 2.5s =~ 42s in the worst case (most of a home LAN /24 is
-    # unused). The previous default (15s) only ever gave the first ~90
+    # unused). 60s leaves real margin above that worst case (a prior 45s
+    # default left only ~3s of headroom -- too tight). This is a ceiling, not
+    # a target: as_completed() below returns as soon as every address has
+    # actually been probed, however much sooner than scan_timeout that is --
+    # it only exists to bound how long a scan can run when addresses are
+    # genuinely slow to resolve, not to make every scan take this long. An
+    # earlier, much shorter default (15s) only ever gave the first ~90
     # addresses (numerically, the low end of the range) a chance to be probed
     # -- a real device on a higher address (e.g. a DHCP lease well into the
     # .150-.254 range) was silently never reached, not merely slow to find.

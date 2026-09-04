@@ -2,6 +2,15 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.15 — 2026-09-04
+
+### Changed
+- Network discovery's overall scan timeout (`scan_subnet`) is now 60s (was 45s, set only hours
+  earlier) — 45s left just ~3s of margin above the documented worst-case sweep time (~42s), which
+  was judged too tight. This is a ceiling, not a target: the scan already returns as soon as it
+  finishes sweeping every address, however much sooner than the timeout that is — this only raises
+  how long a scan is allowed to run before giving up on genuinely slow-to-resolve addresses.
+
 ## 0.1.14 — 2026-09-04
 
 ### Fixed
