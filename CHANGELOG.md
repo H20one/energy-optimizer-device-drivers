@@ -2,6 +2,19 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.1.14 — 2026-09-04
+
+### Fixed
+- Network discovery (HomeWizard P1, Daikin BRP) could silently fail to find a real, reachable
+  device if its IP address happened to fall late in the scanned range (roughly the top two-thirds
+  of a typical home `/24`). A non-responding address doesn't fail fast — no ARP reply means the
+  connection attempt hangs for the full per-probe timeout (~2.5s) rather than an instant refusal —
+  so scanning the full 253-address range at 15 concurrent connections needs up to ~42s in the
+  worst case, but the scan only ever waited 15s before giving up. Confirmed live against a real
+  deployment: reachable devices were reported as "not found" simply because the scan never got to
+  their address before quitting. The scan now waits long enough to actually finish sweeping the
+  whole subnet.
+
 ## 0.1.13 — 2026-09-01
 
 ### Changed
