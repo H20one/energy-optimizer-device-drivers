@@ -123,7 +123,9 @@ EV charger drivers additionally implement `set_current(amps) -> bool`. AC unit d
 implement three setters — `set_mode()`, `set_temperature()`, `set_fan_speed()` — see
 [CONTRIBUTING.md](CONTRIBUTING.md) for full signatures and a worked example.
 
-Optional overrides (both classmethods): `discover()` (auto-detect devices) and `setup_guide()`
+Optional overrides (all classmethods): `discover()` (auto-detect devices), `discover_quick()`
+(fast host-presence pre-filter before `discover()`'s full scan — defaults to just calling
+`discover()` unchanged if not overridden, so this is purely additive), and `setup_guide()`
 (Markdown help text for the setup wizard).
 
 ---
