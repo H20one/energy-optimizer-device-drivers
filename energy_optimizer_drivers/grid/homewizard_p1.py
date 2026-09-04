@@ -119,6 +119,15 @@ class HomewizardP1Driver(GridMeterDriver):
         product info including product_type and serial.
         Scans common LAN ranges (last octet 1-254) on the host's subnet.
         """
+        return cls._run_discovery(quick=False)
+
+    @classmethod
+    def discover_quick(cls) -> DiscoveryResult:
+        """Fast variant of discover() -- see BaseDriver.discover_quick()."""
+        return cls._run_discovery(quick=True)
+
+    @classmethod
+    def _run_discovery(cls, quick: bool) -> DiscoveryResult:
         from energy_optimizer_drivers.lan_scan import scan_subnet
 
         return scan_subnet(
@@ -129,6 +138,7 @@ class HomewizardP1Driver(GridMeterDriver):
                 "WiFi network."
             ),
             label="HomeWizard discovery",
+            quick=quick,
         )
 
     def get_status(self) -> str:

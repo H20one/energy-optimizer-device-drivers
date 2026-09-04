@@ -214,3 +214,23 @@ class TestDiscover:
         assert result.devices == []
         assert len(result.warnings) == 1
         assert "local network address" in result.warnings[0]
+
+
+class TestDiscoverQuick:
+    """discover_quick() -- must forward quick=True to scan_subnet(), unlike
+    discover() itself, which stays zero-argument (test_contract_compliance.py
+    enforces this) and always uses quick=False."""
+
+    def test_discover_forwards_quick_false(self) -> None:
+        # scan_subnet is imported lazily inside _run_discovery(), so it must
+        # be patched at its source module, not homewizard_p1's namespace.
+        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+            HomewizardP1Driver.discover()
+
+        assert mock_scan.call_args.kwargs["quick"] is False
+
+    def test_discover_quick_forwards_quick_true(self) -> None:
+        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+            HomewizardP1Driver.discover_quick()
+
+        assert mock_scan.call_args.kwargs["quick"] is True

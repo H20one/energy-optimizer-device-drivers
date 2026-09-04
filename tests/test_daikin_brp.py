@@ -769,6 +769,24 @@ class TestDaikinBrpDriver:
         assert result.devices == []
         assert len(result.warnings) > 0
 
+    def test_discover_forwards_quick_false(self):
+        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+
+        # scan_subnet is imported lazily inside _run_discovery(), so it must
+        # be patched at its source module, not daikin_brp's namespace.
+        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+            DaikinBrpDriver.discover()
+
+        assert mock_scan.call_args.kwargs["quick"] is False
+
+    def test_discover_quick_forwards_quick_true(self):
+        from energy_optimizer_drivers.ac.daikin_brp import DaikinBrpDriver
+
+        with patch("energy_optimizer_drivers.lan_scan.scan_subnet") as mock_scan:
+            DaikinBrpDriver.discover_quick()
+
+        assert mock_scan.call_args.kwargs["quick"] is True
+
     # ── _probe_daikin ─────────────────────────────────────────────────────────
 
     def test_probe_daikin_returns_ip_on_match(self):
