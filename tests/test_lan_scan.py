@@ -11,9 +11,16 @@ higher addresses were silently never probed at all, not merely slow to find.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
-from energy_optimizer_drivers.lan_scan import scan_subnet
+from energy_optimizer_drivers.lan_scan import _discover_live_hosts, scan_subnet
+
+_FAKE_ARP_TABLE = (
+    "IP address       HW type     Flags       HW address            Mask     Device\n"
+    "192.0.2.10       0x1         0x2         aa:bb:cc:dd:ee:01     *        eth0\n"
+    "192.0.2.11       0x1         0x0         00:00:00:00:00:00     *        eth0\n"
+    "192.0.2.12       0x1         0x2         aa:bb:cc:dd:ee:03     *        eth0\n"
+)
 
 
 class TestScanTimeoutCoversTheWholeSubnet:
@@ -101,3 +108,215 @@ class TestScanSubnetBasics:
 
         assert "192.0.2.99" not in probed_ips
         assert len(probed_ips) == 253  # 254 minus the host's own address
+
+
+class TestDiscoverLiveHosts:
+    """_discover_live_hosts() -- the quick=True pre-filter's own logic,
+    isolated from scan_subnet(). No real network or /proc access -- both the
+    socket connect() and the /proc/net/arp read are mocked."""
+
+    def test_returns_addresses_with_a_resolved_mac(self) -> None:
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=_FAKE_ARP_TABLE),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            result = _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
+
+        assert result == {"192.0.2.10", "192.0.2.12"}
+
+    def test_ignores_a_resolved_address_not_in_the_requested_list(self) -> None:
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=_FAKE_ARP_TABLE),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            # 192.0.2.10 has a real MAC in the fake table but isn't requested.
+            result = _discover_live_hosts(["192.0.2.12"])
+
+        assert result == {"192.0.2.12"}
+
+    def test_skips_a_malformed_line_without_raising(self) -> None:
+        malformed_table = (
+            "IP address       HW type     Flags       HW address            Mask     Device\n"
+            "not enough fields\n"
+            "192.0.2.12       0x1         0x2         aa:bb:cc:dd:ee:03     *        eth0\n"
+        )
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=malformed_table),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            result = _discover_live_hosts(["192.0.2.12"])
+
+        assert result == {"192.0.2.12"}
+
+    def test_returns_none_when_proc_net_arp_is_unreadable(self) -> None:
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket"),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                side_effect=OSError("no such file"),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            result = _discover_live_hosts(["192.0.2.10"])
+
+        assert result is None
+
+    def test_nudges_every_candidate_address(self) -> None:
+        connected_to: list[tuple[str, int]] = []
+
+        def _fake_socket(*_args, **_kwargs):
+            sock = MagicMock()
+            sock.connect.side_effect = lambda addr: connected_to.append(addr)
+            return sock
+
+        with (
+            patch(
+                "energy_optimizer_drivers.lan_scan.socket.socket",
+                side_effect=_fake_socket,
+            ),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=_FAKE_ARP_TABLE),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
+
+        assert connected_to == [
+            ("192.0.2.10", 80),
+            ("192.0.2.11", 80),
+            ("192.0.2.12", 80),
+        ]
+
+    def test_one_broken_nudge_does_not_abort_the_others(self) -> None:
+        def _fake_socket(*_args, **_kwargs):
+            sock = MagicMock()
+            return sock
+
+        call_count = 0
+
+        def _connect_side_effect(addr):
+            nonlocal call_count
+            call_count += 1
+            if addr[0] == "192.0.2.11":
+                raise OSError("network unreachable")
+
+        with (
+            patch(
+                "energy_optimizer_drivers.lan_scan.socket.socket",
+                side_effect=lambda *a, **k: MagicMock(
+                    connect=MagicMock(side_effect=_connect_side_effect)
+                ),
+            ),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=_FAKE_ARP_TABLE),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            result = _discover_live_hosts(["192.0.2.10", "192.0.2.11", "192.0.2.12"])
+
+        assert call_count == 3
+        assert result == {"192.0.2.10", "192.0.2.12"}
+
+    def test_sockets_are_closed_after_reading(self) -> None:
+        created_socks: list[MagicMock] = []
+
+        def _fake_socket(*_args, **_kwargs):
+            sock = MagicMock()
+            created_socks.append(sock)
+            return sock
+
+        with (
+            patch(
+                "energy_optimizer_drivers.lan_scan.socket.socket",
+                side_effect=_fake_socket,
+            ),
+            patch(
+                "energy_optimizer_drivers.lan_scan.open",
+                mock_open(read_data=_FAKE_ARP_TABLE),
+            ),
+            patch("energy_optimizer_drivers.lan_scan.time.sleep"),
+        ):
+            _discover_live_hosts(["192.0.2.10"])
+
+        assert created_socks
+        for sock in created_socks:
+            sock.close.assert_called_once()
+
+
+class TestScanSubnetQuickMode:
+    """scan_subnet(quick=True) -- the pre-filter's integration into the real scan."""
+
+    def test_quick_scan_only_probes_pre_filtered_addresses(self) -> None:
+        probed: list[str] = []
+
+        def probe(ip: str):
+            probed.append(ip)
+            return None
+
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch(
+                "energy_optimizer_drivers.lan_scan._discover_live_hosts",
+                return_value={"192.0.2.10", "192.0.2.200"},
+            ),
+        ):
+            mock_sock = MagicMock()
+            mock_sock.getsockname.return_value = ("192.0.2.99", 0)
+            mock_socket_cls.return_value = mock_sock
+
+            scan_subnet(probe, lambda _subnet: "not found", quick=True)
+
+        assert sorted(probed) == ["192.0.2.10", "192.0.2.200"]
+
+    def test_quick_scan_falls_back_to_a_full_scan_when_prefilter_unavailable(
+        self,
+    ) -> None:
+        probed: list[str] = []
+
+        def probe(ip: str):
+            probed.append(ip)
+            return None
+
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch(
+                "energy_optimizer_drivers.lan_scan._discover_live_hosts",
+                return_value=None,
+            ),
+        ):
+            mock_sock = MagicMock()
+            mock_sock.getsockname.return_value = ("192.0.2.99", 0)
+            mock_socket_cls.return_value = mock_sock
+
+            scan_subnet(probe, lambda _subnet: "not found", quick=True)
+
+        assert len(probed) == 253  # every address, same as quick=False
+
+    def test_default_quick_is_false_and_never_calls_the_prefilter(self) -> None:
+        with (
+            patch("energy_optimizer_drivers.lan_scan.socket.socket") as mock_socket_cls,
+            patch(
+                "energy_optimizer_drivers.lan_scan._discover_live_hosts"
+            ) as mock_prefilter,
+        ):
+            mock_sock = MagicMock()
+            mock_sock.getsockname.return_value = ("192.0.2.99", 0)
+            mock_socket_cls.return_value = mock_sock
+
+            scan_subnet(lambda ip: None, lambda _subnet: "not found")
+
+        mock_prefilter.assert_not_called()

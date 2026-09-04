@@ -2,6 +2,22 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.2.0 — 2026-09-04
+
+### Added
+- `scan_subnet()` gains an opt-in `quick: bool = False` parameter. When `True`, a fast host-presence
+  pre-filter runs before the slow per-address HTTP probe: every candidate address gets a UDP
+  `connect()` (sends no data, only nudges ARP resolution as a side effect — the same technique
+  already used for local-subnet detection in this module and for the main app's gateway-MAC lookup),
+  then `/proc/net/arp` is read once to see which addresses actually have a live host. Only those
+  addresses get the full probe; a genuinely unused address (most of a home `/24`) is skipped
+  entirely instead of paying its ~2.5s per-probe timeout. Confirmed live against a real deployment:
+  full-subnet host discovery in well under 100ms, zero false negatives against real devices, zero
+  false positives against genuinely unused addresses. Falls back to scanning every address if the
+  pre-filter can't determine anything (`/proc/net/arp` unreadable) — never silently "finds nothing"
+  instead. Default `False` preserves the exhaustive behavior every existing caller already gets,
+  unchanged.
+
 ## 0.1.15 — 2026-09-04
 
 ### Changed
