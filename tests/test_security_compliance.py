@@ -19,17 +19,25 @@ from ionemo_drivers.registry import _load_builtin_drivers
 
 _load_builtin_drivers()
 
-_DRIVERS_ROOT = Path(__file__).parent.parent
-# Scan both the per-type driver implementations
-# (ionemo_drivers/{grid,pv,ev,ac}/*.py) and the root-level shared
-# infrastructure (base.py, cert_store.py, registry.py) — cert_store.py does
-# the most security-sensitive TLS/filesystem work in the whole driver layer,
-# so it needs the same scrutiny as any individual driver.
-_DRIVER_FILES = [
-    f
-    for f in list(_DRIVERS_ROOT.glob("*/[!_]*.py")) + list(_DRIVERS_ROOT.glob("[!_]*.py"))
-    if "tests" not in f.parts
-]
+# Anchored on the *package*, not the repo root. This used to read
+# Path(__file__).parent.parent and glob "*/[!_]*.py" — correct while the drivers
+# lived at drivers/ inside ionemo-app, where that reached drivers/grid/*.py. N25
+# extracted the package into this repo, which shifted the same expression up one
+# level: it then matched ionemo_drivers/*.py and stopped reaching two levels down,
+# so from the extraction until 2026-09-05 this scan covered the shared
+# infrastructure and **not one actual driver** — the only code the security
+# contract is really about. The suite stayed green throughout, because scanning
+# five clean files passes.
+#
+# rglob covers the whole package at any depth, so a driver added in a new
+# subdirectory is scanned without anyone remembering to widen this. Files starting
+# with "_" (package __init__.py) are skipped; tools/ is outside the package and is
+# deliberately not scanned — it is developer tooling that never loads inside the
+# app, and the rules below (notably "no print()") are about code that runs there.
+_DRIVERS_ROOT = Path(__file__).parent.parent / "ionemo_drivers"
+_DRIVER_FILES = sorted(
+    f for f in _DRIVERS_ROOT.rglob("[!_]*.py") if "tests" not in f.parts
+)
 _DRIVER_FILE_IDS = [str(f.relative_to(_DRIVERS_ROOT)) for f in _DRIVER_FILES]
 
 # cert_store.py is the documented, deliberate exception to the "no filesystem
@@ -436,3 +444,52 @@ class TestNoIPAddressLogging:
                 + "\n".join(violations)
                 + "\n\nUse logger.debug() instead, or redact the IP from the message."
             )
+
+
+class TestScanCoversEveryDriver:
+    """The scan must actually reach every driver. It once did not.
+
+    While the drivers lived at drivers/ inside ionemo-app, _DRIVERS_ROOT was the
+    package and glob("*/[!_]*.py") reached drivers/grid/*.py. N25 extracted the
+    package into its own repo, which shifted that same expression up one level: it
+    then matched ionemo_drivers/*.py and nothing deeper, so from the extraction until
+    2026-09-05 not one actual driver was scanned. Nothing failed, because scanning
+    five clean infrastructure files passes.
+
+    Verified at the time by planting  in homewizard_p1.py: under
+    the old anchoring the suite went green. These tests exist so that silence is not
+    possible again.
+    """
+
+    def test_every_driver_implementation_is_scanned(self):
+        scanned = {f.resolve() for f in _DRIVER_FILES}
+        package = Path(__file__).parent.parent / "ionemo_drivers"
+
+        missing = [
+            f.relative_to(package)
+            for f in package.rglob("[!_]*.py")
+            if f.resolve() not in scanned
+        ]
+        assert not missing, (
+            f"These package modules are not security-scanned: {missing}. "
+            "Every module that ships inside the app must be covered."
+        )
+
+    def test_the_per_device_type_drivers_are_scanned_by_name(self):
+        """Named explicitly, so a glob that silently stops matching them fails here."""
+        scanned = {f.name for f in _DRIVER_FILES}
+        for driver_module in (
+            "homewizard_p1.py",
+            "aurora_rs485.py",
+            "alfen_eve.py",
+            "daikin_brp.py",
+        ):
+            assert driver_module in scanned, f"{driver_module} is not being scanned"
+
+    def test_scan_is_not_empty_and_reaches_below_the_package_root(self):
+        assert _DRIVER_FILES, "the security scan matched no files at all"
+        nested = [f for f in _DRIVER_FILES if f.parent.name != "ionemo_drivers"]
+        assert nested, (
+            "the scan only matched top-level package modules — it is not "
+            "descending into the per-device-type subdirectories"
+        )

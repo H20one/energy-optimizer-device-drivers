@@ -2,6 +2,27 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.6.0 — 2026-09-05
+
+### Fixed — SECURITY TOOLING
+- **`test_security_compliance.py` was not scanning any driver.** While this package lived at
+  `drivers/` inside the application repo, its file glob was anchored on the package directory and
+  correctly reached `drivers/grid/*.py`. Extracting the package into this repo shifted the same
+  expression up one level, so it matched `ionemo_drivers/*.py` and nothing deeper — from the
+  extraction until now it covered the shared infrastructure (`base.py`, `cert_store.py`,
+  `registry.py`, `lan_scan.py`, `contract_validation.py`) and **not one actual driver**. Nothing
+  ever failed, because scanning five clean files passes. Confirmed by planting `import subprocess`
+  in `homewizard_p1.py`: the suite stayed green. The scan is now anchored on the package and
+  recurses, so all four drivers are covered — and all four pass every existing rule, so this
+  restores a blind gate rather than fixing bad driver code. Three new tests assert the scan
+  reaches every driver by name, so it cannot go quiet again.
+
+### Added
+- `tools/harness.py` — a reference test harness for driver developers. Runs a driver the way the
+  host application does (discovery, config schema, construction, polled reads) without needing the
+  application, which is not public. Validates each reading against the published data contract and
+  flags reads that exceed the app's timeout budget. Stdlib only. See CONTRIBUTING.md.
+
 ## 0.5.0 — 2026-09-04
 
 ### Changed — BREAKING
