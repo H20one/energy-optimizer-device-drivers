@@ -302,6 +302,29 @@ Override `setup_guide()` to return a Markdown string that helps users connect th
 
 Write tests for your driver in `tests/test_{driver_id}.py`. Mock all network/serial I/O.
 
+### Trying your driver against real hardware
+
+`tools/harness.py` runs your driver the way the host application does — discovery, config
+schema, construction, then polled reads — without needing the application itself:
+
+```bash
+python tools/harness.py list                       # every driver the registry can see
+python tools/harness.py schema my_driver           # the fields the Add Device wizard renders
+python tools/harness.py discover my_driver         # your discover(), as the wizard calls it
+python tools/harness.py poll my_driver --config ip=192.168.1.50
+```
+
+`poll` is the one that matters. It is the loop the app's scheduler runs, and it checks every
+reading against the published data contract for your device type, so it catches the common case
+of a driver that talks to its hardware correctly but returns the wrong shape — a missing required
+key, or `None` where a real number is required. It also warns when a read exceeds the app's
+`DRIVER_CALL_TIMEOUT` budget, which is the difference between "works on my bench" and "times out
+in the app".
+
+The harness only prints what your driver returns. There is deliberately no dashboard, storage or
+unit conversion in it — those belong to the app, and a test tool that reformats your data cannot
+show you truthfully what your driver actually produced.
+
 **Never use real captured data from your own device — always fabricate example data shaped to
 match the protocol.** This isn't just a privacy rule (see [SECURITY.md](SECURITY.md) §1.4) — a
 driver written and tested against your one specific unit's real responses tends to quietly assume
