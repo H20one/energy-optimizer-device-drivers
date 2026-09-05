@@ -11,9 +11,16 @@ higher addresses were silently never probed at all, not merely slow to find.
 
 from __future__ import annotations
 
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, mock_open, patch
 
-from ionemo_drivers.lan_scan import _discover_live_hosts, scan_subnet
+from ionemo_drivers.lan_scan import (
+    _discover_live_hosts,
+    reset_live_host_cache,
+    scan_subnet,
+)
 
 _FAKE_ARP_TABLE = (
     "IP address       HW type     Flags       HW address            Mask     Device\n"
@@ -320,3 +327,80 @@ class TestScanSubnetQuickMode:
             scan_subnet(lambda ip: None, lambda _subnet: "not found")
 
         mock_prefilter.assert_not_called()
+
+
+class TestSharedLiveHostSweep:
+    """N51: concurrent drivers share one ARP sweep instead of repeating it each.
+
+    run_discovery() launches every registered driver at once and each sweeps the same
+    /24. Which addresses are alive has nothing to do with which driver is asking, so
+    before this the pre-filter ran once per driver over the same 254 addresses --
+    a cost linear in driver count, in a package designed for third-party drivers.
+    """
+
+    def _run_concurrent_scans(self, count: int) -> int:
+        """Run `count` quick scans at once; return how many ARP sweeps happened."""
+        sweeps = 0
+        lock = threading.Lock()
+
+        def _counting_sweep(ips, wait_s=0.4):
+            nonlocal sweeps
+            with lock:
+                sweeps += 1
+            time.sleep(0.02)  # make overlap real, not incidental scheduling luck
+            return {"192.0.2.10"}
+
+        with (
+            patch("ionemo_drivers.lan_scan._discover_live_hosts", _counting_sweep),
+            patch("ionemo_drivers.lan_scan.socket.socket") as mock_sock,
+        ):
+            mock_sock.return_value.getsockname.return_value = ("192.0.2.1", 0)
+            with ThreadPoolExecutor(max_workers=count) as pool:
+                list(
+                    pool.map(
+                        lambda _: scan_subnet(
+                            probe=lambda ip: None,
+                            not_found_message=lambda prefix: "none",
+                            quick=True,
+                            max_workers=2,
+                        ),
+                        range(count),
+                    )
+                )
+        return sweeps
+
+    def test_eight_concurrent_scans_perform_one_sweep(self):
+        reset_live_host_cache()
+        assert self._run_concurrent_scans(8) == 1
+
+    def test_cache_can_be_dropped_so_a_later_scan_re_checks_the_network(self):
+        """A rescan after the TTL must genuinely look again — someone may have just
+        plugged the device in, and answering from the previous sweep would miss it."""
+        reset_live_host_cache()
+        assert self._run_concurrent_scans(3) == 1
+        reset_live_host_cache()
+        assert self._run_concurrent_scans(3) == 1  # swept again, not served stale
+
+    def test_unreadable_arp_is_cached_too_rather_than_retried_per_driver(self):
+        reset_live_host_cache()
+        calls = 0
+
+        def _unavailable(ips, wait_s=0.4):
+            nonlocal calls
+            calls += 1
+            return None
+
+        with (
+            patch("ionemo_drivers.lan_scan._discover_live_hosts", _unavailable),
+            patch("ionemo_drivers.lan_scan.socket.socket") as mock_sock,
+        ):
+            mock_sock.return_value.getsockname.return_value = ("192.0.2.1", 0)
+            for _ in range(4):
+                scan_subnet(
+                    probe=lambda ip: None,
+                    not_found_message=lambda prefix: "none",
+                    quick=True,
+                    max_workers=2,
+                )
+
+        assert calls == 1, "a host without /proc/net/arp retried the sweep per driver"

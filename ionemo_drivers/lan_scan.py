@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import socket
+import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -82,6 +83,58 @@ def _discover_live_hosts(ips: list[str], wait_s: float = 0.4) -> set[str] | None
             sock.close()
 
 
+# One shared live-host sweep per subnet, reused across concurrent scans.
+#
+# Every registered driver sweeps the same /24 looking for its own protocol, and
+# run_discovery() launches them all at once -- so before this, N drivers each ran
+# their own identical ARP pre-filter over the same 254 addresses. That is pure
+# duplicate work: which addresses are alive has nothing to do with which driver is
+# asking. With four builtin drivers it was survivable; the cost is linear in driver
+# count, and this package is designed for third-party drivers to be added.
+#
+# The TTL only has to outlive the moment every driver starts scanning, not a whole
+# scan: run_discovery() submits them together and the sweep itself takes about
+# quick_wait_s. A few seconds covers thread-start jitter with room to spare.
+#
+# Kept deliberately short because the failure mode of a long TTL is worse than a
+# duplicated sweep: someone plugs a device in, presses scan again, and gets answered
+# from a set collected before it was on the network. Five seconds is far below any
+# human retry loop, so a rescan a person actually initiates always re-checks.
+_LIVE_HOSTS_TTL_S = 5.0
+_live_hosts_lock = threading.Lock()
+_live_hosts_cache: dict[str, tuple[float, set[str] | None]] = {}
+
+
+def _shared_live_hosts(
+    subnet_prefix: str, ips: list[str], wait_s: float
+) -> set[str] | None:
+    """:func:`_discover_live_hosts`, computed once per subnet per TTL.
+
+    The lock is held across the sweep itself, not just the cache read, so drivers
+    starting simultaneously queue behind the first one instead of all deciding the
+    cache is empty and sweeping anyway -- which would reproduce exactly the
+    duplication this exists to remove.
+
+    A ``None`` result (``/proc/net/arp`` unreadable) is cached like any other, so a
+    host where the pre-filter cannot work does not retry it once per driver. Callers
+    still treat ``None`` as "could not determine, do not filter".
+    """
+    with _live_hosts_lock:
+        cached = _live_hosts_cache.get(subnet_prefix)
+        if cached is not None and (time.monotonic() - cached[0]) < _LIVE_HOSTS_TTL_S:
+            return cached[1]
+
+        live_hosts = _discover_live_hosts(ips, wait_s=wait_s)
+        _live_hosts_cache[subnet_prefix] = (time.monotonic(), live_hosts)
+        return live_hosts
+
+
+def reset_live_host_cache() -> None:
+    """Forget the cached sweep. For tests, and for any caller that must not reuse it."""
+    with _live_hosts_lock:
+        _live_hosts_cache.clear()
+
+
 def scan_subnet(
     probe: Callable[[str], dict[str, Any] | None],
     not_found_message: Callable[[str], str],
@@ -146,7 +199,7 @@ def scan_subnet(
 
     probe_ips = ips
     if quick:
-        live_hosts = _discover_live_hosts(ips, wait_s=quick_wait_s)
+        live_hosts = _shared_live_hosts(subnet_prefix, ips, quick_wait_s)
         if live_hosts is None:
             logger.warning(
                 "%s: quick pre-filter unavailable (/proc/net/arp unreadable) "
