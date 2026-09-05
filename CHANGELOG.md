@@ -2,6 +2,22 @@
 
 All notable changes to the device drivers package are documented here.
 
+## 0.6.1 — 2026-09-05
+
+### Changed
+- Quick discovery now performs **one** live-host sweep shared by every driver scanning at the same
+  time, instead of one sweep per driver. The host app launches every registered driver
+  concurrently and each swept the same /24 to work out which addresses are alive — but that
+  answer does not depend on which driver is asking. With four builtin drivers this was survivable;
+  the cost was linear in driver count, in a package built for third parties to add drivers to. No
+  driver contract change, and no driver needs updating.
+- The shared result is held for five seconds — long enough to cover every driver starting, short
+  enough that a scan a person actually initiates always re-checks the network. A longer window
+  would risk answering “I just plugged it in, scan again” from a sweep taken before the device
+  was connected.
+- Deep scan is unchanged. It exists to cover the pre-filter missing a live device, and this change
+  makes quick scanning cheaper without making deep any less necessary.
+
 ## 0.6.0 — 2026-09-05
 
 ### Fixed — SECURITY TOOLING
