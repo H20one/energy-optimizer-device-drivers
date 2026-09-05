@@ -381,13 +381,26 @@ def test_get_data_failure():
    identity attributes, method signatures, ABC hierarchy) and `tests/test_security_compliance.py`
    (static analysis against [SECURITY.md](SECURITY.md)'s rules — forbidden imports/calls, credential
    logging, missing timeouts, outbound-internet calls, etc.). Both must pass before review.
-3. **An AI reviewer agent** (`.github/agents/driver-reviewer.agent.md`) does a deeper pass beyond
-   what the automated tests check for — data contract correctness against the relevant
-   `docs/contracts/{device_type}.md`, `discover()`/`get_data()` never raising, sensible error
-   handling, and anything the static checks can't catch (see [SECURITY.md](SECURITY.md)'s own note on
-   what its automated enforcement does and doesn't cover). Expect comments directly on the PR.
-4. **A maintainer does the final review** — CI passing and the automated agent review are necessary,
-   not sufficient; a human still confirms the driver is safe and correct before merging, especially
+3. **A maintainer may request an AI review** by adding the `ai-review` label, which runs
+   `.github/agents/driver-reviewer.agent.md` against the diff and posts the result as a PR
+   comment (`.github/workflows/driver-review.yml`). It covers what static analysis cannot —
+   data contract correctness against the relevant `docs/contracts/{device_type}.md`,
+   `discover()`/`get_data()` never raising, whether warnings are actually useful to a
+   non-technical person.
+
+   **It is advisory, not a gate, and it does not run automatically.** Two reasons, both
+   deliberate. This repository is public and takes contributions from forks: a fork's PR gets
+   no repository secrets, so an automatic API-key review would silently do nothing in exactly
+   the case it exists for, and the trigger that *does* get secrets
+   (`pull_request_target`) combined with untrusted code is a well-known way to get a repo
+   compromised. And the model reads attacker-controllable diff text, so it can be talked out of
+   reporting something. A maintainer applying a label is a person deciding to run it on a
+   specific PR; the result informs their read rather than replacing it.
+
+   If no `ANTHROPIC_API_KEY` secret is configured the job skips with a notice, and the
+   deterministic suites in step 2 still gate the PR as normal.
+4. **A maintainer does the final review** — CI passing is necessary, not sufficient; a human
+   still confirms the driver is safe and correct before merging, especially
    for anything the static checks structurally can't verify. This repo's own tests mock all
    network/serial I/O by design (see "Testing" above), so nothing here ever runs a driver against a
    real device — that only happens if the maintainer owns matching hardware, by temporarily pointing

@@ -17,8 +17,9 @@ These rules apply to all code inside `ionemo_drivers/` — including builtin dri
 **Note on automated enforcement:** `tests/test_security_compliance.py` can only scan files
 physically present in this repo's `ionemo_drivers/` tree (builtin drivers + root-level infra). It cannot
 and does not scan externally pip-installed driver packages — those are only covered by this
-document as policy and by manual/agent-assisted review (`.github/agents/driver-reviewer.agent.md`),
-not by the automated test suite. See "Enforcement" at the bottom for exactly which rules below
+document as policy and by manual/agent-assisted review (`.github/agents/driver-reviewer.agent.md`,
+run on request via the `ai-review` label — see CONTRIBUTING.md step 3 for why it is deliberately
+not automatic), not by the automated test suite. See "Enforcement" at the bottom for exactly which rules below
 have an automated check today and which are policy-only.
 
 ---
