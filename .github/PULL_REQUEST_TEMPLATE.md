@@ -22,7 +22,7 @@
 
 <!--
 If yes: stop — see ARCHITECTURE.md's "Changes that need a maintainer, not just a PR" and open an
-issue first instead of this PR. These need a coordinated change in the main energy-optimizer app
+issue first instead of this PR. These need a coordinated change in the main ionemo-app
 too, which a PR here can't do on its own.
 -->
 

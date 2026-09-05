@@ -1,6 +1,6 @@
 """Tests for ionemo_drivers/ac/daikin_brp.py — DaikinBrpDriver.
 
-Extracted from energy-optimizer's tests/test_ac.py (the app-route/scheduler tests stayed there;
+Extracted from ionemo-app's tests/test_ac.py (the app-route/scheduler tests stayed there;
 this class tests only the driver itself) as part of the drivers-repo split.
 """
 

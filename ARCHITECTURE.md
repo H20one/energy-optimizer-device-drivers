@@ -2,7 +2,7 @@
 
 ## What this is
 
-A pip-installable Python package of device driver plugins for energy-optimizer (product name:
+A pip-installable Python package of device driver plugins for ionemo-app (product name:
 Ionemo — "smart energy & home control"), a self-hosted home-energy and device-control platform.
 Each driver adapts one device's protocol (HTTP, HTTPS, or RS-485 serial) into a fixed data contract
 the main app understands.
@@ -47,7 +47,7 @@ why and how to request one.
 ## Changes that need a maintainer, not just a PR
 
 Most of this repo is safe to change freely within a driver you're adding or fixing. A specific,
-narrow set of changes reaches outside this repo into the main `energy-optimizer` app in ways a
+narrow set of changes reaches outside this repo into the main `ionemo-app` in ways a
 contributor here has no visibility into — opening a PR for any of these without discussing it first
 will very likely get closed, not merged silently.
 
@@ -86,7 +86,7 @@ existing driver, adding tests — is a normal PR, no separate discussion needed.
 
 ## How the main app consumes this package
 
-`energy-optimizer`'s `requirements.txt` pins a released tag of this repo
+`ionemo-app`'s `requirements.txt` pins a released tag of this repo
 (`git+https://github.com/H20one/ionemo-drivers.git@vX.Y.Z`) — never an unpinned
 branch, for reproducible builds. At startup, `ionemo_drivers.registry.load_all_drivers()`
 imports the four builtin driver modules (each registers itself at import time) and separately

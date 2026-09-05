@@ -1,4 +1,4 @@
-"""Locks down the exact surface the main `energy-optimizer` app depends on.
+"""Locks down the exact surface the main `ionemo-app` depends on.
 
 That app is a separate, private repo — nothing here can run its test suite
 directly, so this file is the next best thing for the four specific breaking
